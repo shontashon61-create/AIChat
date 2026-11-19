@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-<key>NSCameraUsageDescription</key><string>Нужно для съёмки фото и видео прямо в чате</string>
-<key>NSMicrophoneUsageDescription</key><string>Нужно для голосового ввода</string>
-<key>NSSpeechRecognitionUsageDescription</key><string>Нужно для распознавания речи в текст</string>
-<key>NSPhotoLibraryUsageDescription</key><string>Нужно для выбора фото и видео для ИИ</string>
-</dict></plist>
