@@ -35,9 +35,9 @@ struct CodeBlockView: View {
     @State private var copied = false
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack { Text(language.isEmpty ? "code" : language).font(.caption2.bold()).foregroundStyle(.secondary); Spacer(); Button(copied ? "Скопировано" : "Копировать") { UIPasteboard.general.string = code; copied = true; DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false } }.font(.caption2) }
-            .padding(.horizontal, 10).padding(.vertical, 6).background(Color.black.opacity(0.25))
-            ScrollView(.horizontal, showsIndicators: false) { Text(code).font(.system(.caption, design: .monospaced)).padding(10).textSelection(.enabled) }
-        }.background(Color.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 10))
+            HStack { Text(language.isEmpty ? "code" : language).font(.caption2.bold()).foregroundStyle(.white.opacity(0.7)); Spacer(); Button(copied ? "Скопировано" : "Копировать") { UIPasteboard.general.string = code; copied = true; DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false } }.font(.caption2).foregroundStyle(.white) }
+            .padding(.horizontal, 10).padding(.vertical, 6).background(DesignTheme.codeBackground.opacity(0.85))
+            ScrollView(.horizontal, showsIndicators: false) { Text(code).font(.system(.caption, design: .monospaced)).foregroundStyle(.white).padding(10).textSelection(.enabled) }
+        }.background(DesignTheme.codeBackground, in: RoundedRectangle(cornerRadius: 10))
     }
 }

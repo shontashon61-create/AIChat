@@ -7,9 +7,16 @@ struct AIChatApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(settings)
-                .environmentObject(store)
+            Group {
+                if !settings.hasSeenOnboarding {
+                    OnboardingView()
+                } else {
+                    ContentView()
+                }
+            }
+            .environmentObject(settings)
+            .environmentObject(store)
+            .preferredColorScheme(AppThemes.palette(for: settings.appTheme).isDark ? .dark : .light)
         }
     }
 }

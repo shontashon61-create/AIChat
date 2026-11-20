@@ -47,6 +47,10 @@ class SettingsStore: ObservableObject {
     @AppStorage("voiceEnabled") var voiceEnabled: Bool = true
     @AppStorage("autoSpeak") var autoSpeak: Bool = false
     @AppStorage("isDark") var isDark: Bool = true
+    @AppStorage("appTheme") var appTheme: String = "paper"
+    @AppStorage("fontSize") var fontSize: Double = 16
+    @AppStorage("hasSeenOnboarding") var hasSeenOnboarding: Bool = false
+    @AppStorage("userName") var userName: String = ""
     @AppStorage("maxTokens") var maxTokens: Int = 2048
     @AppStorage("contextLimit") var contextLimit: Int = 20
     @Published var availableModels: [AIModel] = []

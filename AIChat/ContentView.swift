@@ -8,8 +8,8 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(colors: settings.isDark ? [Color.black, Color(red: 0.08, green: 0.07, blue: 0.18)] : [Color.white, Color(red: 0.9, green: 0.93, blue: 1.0)], startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
-                if let session = store.current ?? store.sessions.first { ChatView(session: session) } else { VStack(spacing: 16) { Image(systemName: "sparkles").font(.system(size: 52)).foregroundStyle(.purple); Text("Привет! Я ваш ИИ-помощник").font(.title2.bold()); Text("Настройте API в шестерёнке, выберите модель и начните чат.").multilineTextAlignment(.center).foregroundStyle(.secondary).padding(.horizontal); Button("Новый чат") { _ = store.newChat() }.buttonStyle(.borderedProminent) } }
+                DesignTheme.background.ignoresSafeArea()
+                if let session = store.current ?? store.sessions.first { ChatView(session: session) } else { VStack(spacing: 16) { Image(systemName: "sparkles").font(.system(size: 44)).foregroundStyle(DesignTheme.primary); Text("Чем помочь?").font(.title2.bold()); Text("Настройте API в шестерёнке, выберите модель и начните чат.").multilineTextAlignment(.center).foregroundStyle(.secondary).padding(.horizontal); Button("Новый чат") { _ = store.newChat() }.buttonStyle(.borderedProminent) } }
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button { showHistory = true } label: { Image(systemName: "sidebar.left") } }
@@ -17,7 +17,7 @@ struct ContentView: View {
                 ToolbarItem(placement: .topBarTrailing) { HStack { Button { _ = store.newChat() } label: { Image(systemName: "square.and.pencil") }; Button { showSettings = true } label: { Image(systemName: "gearshape") } } }
             }
         }
-        .preferredColorScheme(settings.isDark ? .dark : .light)
+        .preferredColorScheme(AppThemes.palette(for: settings.appTheme).isDark ? .dark : .light)
         .sheet(isPresented: $showSettings) { SettingsView() }
         .sheet(isPresented: $showHistory) { HistoryView() }
         .task { if store.sessions.isEmpty { _ = store.newChat() }; await APIClient.fetchModels(settings: settings) }
@@ -34,7 +34,7 @@ struct ModelPickerMenu: View {
             Button("Обновить модели") { Task { await APIClient.fetchModels(settings: settings) } }
             if let e = settings.modelsError { Text(e) }
         } label: {
-            HStack(spacing: 4) { Text(settings.selectedModel.isEmpty ? "Выбрать модель" : settings.selectedModel).lineLimit(1).font(.subheadline.bold()); Image(systemName: "chevron.down").font(.caption) }.padding(.horizontal, 10).padding(.vertical, 6).background(.ultraThinMaterial, in: Capsule())
+            HStack(spacing: 4) { Text(settings.selectedModel.isEmpty ? "Выбрать модель" : settings.selectedModel).lineLimit(1).font(.subheadline.bold()); Image(systemName: "chevron.down").font(.caption) }.padding(.horizontal, 12).padding(.vertical, 8).background(DesignTheme.chip, in: Capsule()).overlay(Capsule().stroke(DesignTheme.border))
         }
     }
 }
@@ -50,8 +50,8 @@ struct HistoryView: View {
         NavigationStack {
             List {
                 ForEach(filtered) { s in
-                    Button { store.currentId = s.id; dismiss() } label: { VStack(alignment: .leading, spacing: 4) { HStack { if s.isPinned { Image(systemName: "pin.fill").font(.caption).foregroundStyle(.purple) }; Text(s.title).bold().lineLimit(1); Spacer(); Text("\(s.messages.count)").font(.caption2).foregroundStyle(.secondary) }; if !s.lastPreview.isEmpty { Text(s.lastPreview).font(.caption).foregroundStyle(.secondary).lineLimit(1) }; Text(s.createdAt, style: .date).font(.caption).foregroundStyle(.secondary) } }
-                    .swipeActions(edge: .leading) { Button { store.togglePin(s.id) } label: { Label(s.isPinned ? "Открепить" : "Закрепить", systemImage: "pin") }.tint(.purple) }
+                    Button { store.currentId = s.id; dismiss() } label: { VStack(alignment: .leading, spacing: 4) { HStack { if s.isPinned { Image(systemName: "pin.fill").font(.caption).foregroundStyle(DesignTheme.primary) }; Text(s.title).bold().lineLimit(1); Spacer(); Text("\(s.messages.count)").font(.caption2).foregroundStyle(.secondary) }; if !s.lastPreview.isEmpty { Text(s.lastPreview).font(.caption).foregroundStyle(.secondary).lineLimit(1) }; Text(s.createdAt, style: .date).font(.caption).foregroundStyle(.secondary) } }
+                    .swipeActions(edge: .leading) { Button { store.togglePin(s.id) } label: { Label(s.isPinned ? "Открепить" : "Закрепить", systemImage: "pin") }.tint(DesignTheme.primary) }
                     .swipeActions(edge: .trailing) { Button(role: .destructive) { store.delete(s.id) } label: { Label("Удалить", systemImage: "trash") }; Button { renameSession = s; renameText = s.title } label: { Label("Переименовать", systemImage: "pencil") }.tint(.blue) }
                 }
             }
