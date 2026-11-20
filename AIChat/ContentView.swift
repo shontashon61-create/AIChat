@@ -14,7 +14,7 @@ struct ContentView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button { showHistory = true } label: { Image(systemName: "sidebar.left") } }
                 ToolbarItem(placement: .principal) { ModelPickerMenu() }
-                ToolbarItem(placement: .topBarTrailing) { HStack { Button { _ = store.newChat() } label: { Image(systemName: "square.and.pencil") }; Button { showSettings = true } label: { Image(systemName: "gearshape") } } }
+                ToolbarItem(placement: .topBarTrailing) { HStack(spacing: 14) { Button { _ = store.newChat() } label: { Image(systemName: "square.and.pencil") }; Button { showSettings = true } label: { Image(systemName: "gearshape") } } }
             }
         }
         .preferredColorScheme(AppThemes.palette(for: settings.appTheme).isDark ? .dark : .light).tint(DesignTheme.primary)
@@ -26,6 +26,7 @@ struct ContentView: View {
 
 struct ModelPickerMenu: View {
     @EnvironmentObject var settings: SettingsStore
+    var shortName: String { settings.selectedModel.isEmpty ? "Модель" : (settings.selectedModel.components(separatedBy: "/").last ?? settings.selectedModel) }
     var body: some View {
         Menu {
             if settings.availableModels.isEmpty { Text(settings.isLoadingModels ? "Загрузка моделей..." : "Модели не загружены") }
@@ -34,7 +35,23 @@ struct ModelPickerMenu: View {
             Button("Обновить модели") { Task { await APIClient.fetchModels(settings: settings) } }
             if let e = settings.modelsError { Text(e) }
         } label: {
-            HStack(spacing: 4) { Text(settings.selectedModel.isEmpty ? "Выбрать модель" : settings.selectedModel).lineLimit(1).font(.subheadline.bold()); Image(systemName: "chevron.down").font(.caption) }.padding(.horizontal, 12).padding(.vertical, 8).background(DesignTheme.chip, in: Capsule()).overlay(Capsule().stroke(DesignTheme.border))
+            HStack(spacing: 4) { Text(shortName).lineLimit(1).truncationMode(.middle).font(.callout.bold()); Image(systemName: "chevron.down").font(.caption2) }.frame(maxWidth: 160).padding(.horizontal, 10).padding(.vertical, 7).background(DesignTheme.chip, in: Capsule()).overlay(Capsule().stroke(DesignTheme.border))
+        }.layoutPriority(1)
+    }
+}
+
+struct ModelPickerSheet: View {
+    @EnvironmentObject var settings: SettingsStore
+    @Environment(\.dismiss) var dismiss
+    var body: some View {
+        NavigationStack {
+            List {
+                if settings.availableModels.isEmpty { Text(settings.isLoadingModels ? "Загрузка моделей..." : "Модели не загружены. Проверьте Base URL и ключ в настройках.").font(.subheadline).foregroundStyle(.secondary) }
+                ForEach(settings.availableModels) { m in Button { settings.selectedModel = m.id; dismiss() } label: { HStack { Text(m.id).lineLimit(2).font(.subheadline); Spacer(); if settings.selectedModel == m.id { Image(systemName: "checkmark").foregroundStyle(DesignTheme.primary) } } } }
+            }
+            .navigationTitle("Выбрать модель").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarLeading) { Button("Обновить") { Task { await APIClient.fetchModels(settings: settings) } } }; ToolbarItem(placement: .topBarTrailing) { Button("Готово") { dismiss() } } }
+            .task { if settings.availableModels.isEmpty { await APIClient.fetchModels(settings: settings) } }
         }
     }
 }

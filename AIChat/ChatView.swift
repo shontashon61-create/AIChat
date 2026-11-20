@@ -15,6 +15,7 @@ struct ChatView: View {
     @State private var showSearch = false
     @State private var searchText = ""
     @State private var previewAttachment: Attachment?
+    @State private var showModelSheet = false
     @StateObject private var speech = SpeechManager()
     @State private var streamTask: Task<Void, Never>?
     var visibleMessages: [ChatMessage] { searchText.isEmpty ? session.messages : session.messages.filter { $0.content.localizedCaseInsensitiveContains(searchText) } }
@@ -39,6 +40,7 @@ struct ChatView: View {
             inputBar
         }
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showSearch.toggle(); if !showSearch { searchText = "" } } label: { Image(systemName: "magnifyingglass") } } }
+        .sheet(isPresented: $showModelSheet) { ModelPickerSheet() }
         .sheet(isPresented: $showPicker) { PhotoVideoPicker(onPick: addAttachment) }
         .sheet(isPresented: $showCamera) { CameraPicker(onPick: addAttachment) }
         .sheet(item: $previewAttachment) { a in AttachmentPreviewView(attachment: a) }
@@ -55,8 +57,8 @@ struct ChatView: View {
             Image(systemName: "sparkles").font(.system(size: 44)).foregroundStyle(DesignTheme.primary)
             Text("Чем помочь?").font(.title2.bold())
             if settings.selectedModel.isEmpty {
-                Button("Выбрать модель") { Task { await APIClient.fetchModels(settings: settings) } }.buttonStyle(PrimaryButtonStyle())
-                Text("Модель не выбрана — нажми, чтобы загрузить список").font(.caption).foregroundStyle(.secondary)
+                Button("Выбрать модель") { showModelSheet = true }.buttonStyle(PrimaryButtonStyle())
+                Text("Без модели сообщения не отправляются").font(.caption).foregroundStyle(.secondary)
             } else {
                 Text(settings.selectedModel).font(.caption).padding(.horizontal, 10).padding(.vertical, 4).background(DesignTheme.chip, in: Capsule()).foregroundStyle(.secondary)
             }
@@ -64,9 +66,9 @@ struct ChatView: View {
         }.padding(.vertical, 32).padding(.horizontal)
     }
     var quickPrompts: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-            ForEach([("Объясни простыми словами", "text.bubble"), ("Напиши код", "chevron.left.forwardslash.chevron.right"), ("Составь план", "list.bullet"), ("Проверь текст", "checkmark.circle")], id: \.0) { p in
-                Button { Haptic.tap(); input = p.0; send() } label: { HStack { Image(systemName: p.1); Text(p.0).lineLimit(1) }.frame(maxWidth: .infinity, alignment: .leading) }.padding(.horizontal, 12).padding(.vertical, 10).background(DesignTheme.chip, in: RoundedRectangle(cornerRadius: 12)).font(.subheadline)
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+            ForEach([("Объясни просто", "text.bubble"), ("Напиши код", "chevron.left.forwardslash.chevron.right"), ("Составь план", "list.bullet"), ("Проверь текст", "checkmark.circle")], id: \.0) { p in
+                Button { Haptic.tap(); if settings.selectedModel.isEmpty { showModelSheet = true } else { input = p.0; send() } } label: { HStack(alignment: .top, spacing: 6) { Image(systemName: p.1).font(.caption); Text(p.0).lineLimit(2).multilineTextAlignment(.leading) }.frame(maxWidth: .infinity, alignment: .leading) }.padding(.horizontal, 10).padding(.vertical, 10).background(DesignTheme.chip, in: RoundedRectangle(cornerRadius: 12)).font(.callout)
             }
         }.padding(.horizontal).padding(.bottom, 8)
     }
@@ -88,7 +90,7 @@ struct ChatView: View {
     }
     var inputBar: some View {
         VStack(spacing: 4) {
-            HStack(alignment: .bottom, spacing: 8) {
+            HStack(alignment: .bottom, spacing: 6) {
                 Button { showAttachMenu = true } label: { Image(systemName: "plus.circle.fill").font(.title2).foregroundStyle(DesignTheme.primary) }
                 TextField("Сообщение...", text: $input, axis: .vertical).lineLimit(1...5).padding(10).background(DesignTheme.chip, in: RoundedRectangle(cornerRadius: 18))
                 Button { if speech.isRecording { speech.stop() } else { speech.transcript = ""; speech.start() } } label: { Image(systemName: speech.isRecording ? "mic.fill" : "mic").font(.title3).foregroundStyle(speech.isRecording ? .red : .primary) }
