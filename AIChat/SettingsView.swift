@@ -36,6 +36,10 @@ struct SettingsView: View {
                         Stepper("Макс. токенов: \(settings.maxTokens)", value: $settings.maxTokens, in: 256...8192, step: 256)
                         Stepper("Контекст: последние \(settings.contextLimit) сообщ.", value: $settings.contextLimit, in: 4...50, step: 2)
                         HStack { Text("Температура"); Slider(value: $settings.temperature, in: 0...2, step: 0.1); Text(String(format: "%.1f", settings.temperature)) }
+                        Text("Генерация картинок").font(.subheadline)
+                        TextField("Модель картинок", text: $settings.imageModel).autocorrectionDisabled().textInputAutocapitalization(.never).padding(10).background(DesignTheme.chip, in: RoundedRectangle(cornerRadius: 10))
+                        Picker("Размер картинки", selection: $settings.imageSize) { Text("1024 × 1024").tag("1024x1024"); Text("1024 × 1792").tag("1024x1792"); Text("1792 × 1024").tag("1792x1024") }
+                        Text("В чате нажми + и выбери «Сгенерировать фото» — текст из поля ввода уйдёт как описание. Видео зависит от провайдера: стандартного OpenAI-совместимого endpoint для видео нет, приложение честно покажет ошибку провайдера.").font(.caption).foregroundStyle(.secondary)
                     }.cardStyle()
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Внешний вид и голос").font(.headline)
@@ -44,6 +48,10 @@ struct SettingsView: View {
                         HStack { Text("Размер шрифта"); Slider(value: $settings.fontSize, in: 14...20, step: 1); Text("\(Int(settings.fontSize))") }
                         Toggle("Озвучка ответов", isOn: $settings.voiceEnabled)
                         Toggle("Озвучивать автоматически", isOn: $settings.autoSpeak)
+                        Picker("Голос", selection: $settings.voiceID) { Text("Русский").tag("ru-RU"); Text("Английский US").tag("en-US"); Text("Английский GB").tag("en-GB"); Text("Немецкий").tag("de-DE"); Text("Французский").tag("fr-FR") }
+                        HStack { Text("Скорость речи"); Slider(value: $settings.voiceRate, in: 0.30...0.65, step: 0.01); Text(String(format: "%.2f", settings.voiceRate)) }
+                        HStack { Text("Высота голоса"); Slider(value: $settings.voicePitch, in: 0.5...2.0, step: 0.1); Text(String(format: "%.1f", settings.voicePitch)) }
+                        Button("Проверить голос") { Speaker.shared.speak("Привет! Это проверка голоса и скорости речи.") }.font(.caption)
                     }.cardStyle()
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Данные").font(.headline)

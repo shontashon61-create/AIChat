@@ -88,4 +88,18 @@ class APIClient {
             if let c = d.content, !c.isEmpty { onContent(c) }
         }
     }
+    struct ImageResponse: Decodable { struct Item: Decodable { let b64_json: String?; let url: String? }; let data: [Item] }
+    static func generateImage(settings: SettingsStore, prompt: String) async throws -> Attachment {
+        guard let url = URL(string: settings.cleanBaseURL + "/images/generations") else { throw URLError(.badURL) }
+        var req = URLRequest(url: url, timeoutInterval: 120); req.httpMethod = "POST"; req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if !settings.apiKey.isEmpty { req.setValue("Bearer \(settings.apiKey)", forHTTPHeaderField: "Authorization") }
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["model": settings.imageModel, "prompt": prompt, "size": settings.imageSize, "n": 1])
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else { let body = String(data: data, encoding: .utf8) ?? ""; throw NSError(domain: "API", code: (resp as? HTTPURLResponse)?.statusCode ?? 0, userInfo: [NSLocalizedDescriptionKey: "Генерация фото: HTTP \((resp as? HTTPURLResponse)?.statusCode ?? 0): \(String(body.prefix(400)))"]) }
+        let decoded = try JSONDecoder().decode(ImageResponse.self, from: data)
+        guard let item = decoded.data.first else { throw URLError(.badServerResponse) }
+        if let b64 = item.b64_json, !b64.isEmpty { return Attachment(kind: "image", fileName: "generated.png", mimeType: "image/png", base64: b64) }
+        if let u = item.url, let imgURL = URL(string: u) { let (imgData, _) = try await URLSession.shared.data(from: imgURL); return Attachment(kind: "image", fileName: "generated.png", mimeType: "image/png", base64: imgData.base64EncodedString()) }
+        throw URLError(.badServerResponse)
+    }
 }

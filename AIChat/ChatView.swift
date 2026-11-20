@@ -16,6 +16,8 @@ struct ChatView: View {
     @State private var searchText = ""
     @State private var previewAttachment: Attachment?
     @State private var showModelSheet = false
+    @State private var isGeneratingImage = false
+    @FocusState private var inputFocused: Bool
     @StateObject private var speech = SpeechManager()
     @State private var streamTask: Task<Void, Never>?
     var visibleMessages: [ChatMessage] { searchText.isEmpty ? session.messages : session.messages.filter { $0.content.localizedCaseInsensitiveContains(searchText) } }
@@ -32,6 +34,7 @@ struct ChatView: View {
                         if isSending { HStack { TypingDots(); Text("ИИ печатает...").font(.caption).foregroundStyle(.secondary); Spacer() }.padding(.leading, 4) }
                     }.padding(.horizontal).padding(.vertical, 12)
                 }
+                .scrollDismissesKeyboard(.interactively)
                 .onChange(of: session.messages.count) { _ in scrollToLast(proxy) }
                 .onChange(of: session.messages.last?.content ?? "") { _ in scrollToLast(proxy) }
             }
@@ -40,11 +43,12 @@ struct ChatView: View {
             inputBar
         }
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showSearch.toggle(); if !showSearch { searchText = "" } } label: { Image(systemName: "magnifyingglass") } } }
+        .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Готово") { inputFocused = false } } }
         .sheet(isPresented: $showModelSheet) { ModelPickerSheet() }
         .sheet(isPresented: $showPicker) { PhotoVideoPicker(onPick: addAttachment) }
         .sheet(isPresented: $showCamera) { CameraPicker(onPick: addAttachment) }
         .sheet(item: $previewAttachment) { a in AttachmentPreviewView(attachment: a) }
-        .confirmationDialog("Добавить", isPresented: $showAttachMenu) { Button("Фото или видео из галереи") { showPicker = true }; Button("Снять фото или видео") { showCamera = true }; Button("Отмена", role: .cancel) {} }
+        .confirmationDialog("Добавить", isPresented: $showAttachMenu) { Button("Фото или видео из галереи") { showPicker = true }; Button("Снять фото или видео") { showCamera = true }; Button("Сгенерировать фото") { Task { await generateImage() } }; Button("Отмена", role: .cancel) {} }
         .alert("Ошибка", isPresented: Binding(get: { errorText != nil }, set: { if !$0 { errorText = nil } })) { Button("OK") {} } message: { Text(errorText ?? "") }
         .onChange(of: store.currentId) { _ in if let s = store.sessions.first(where: { $0.id == store.currentId }) { session = s } }
         .onChange(of: speech.transcript) { v in input = v }
@@ -92,7 +96,7 @@ struct ChatView: View {
         VStack(spacing: 4) {
             HStack(alignment: .bottom, spacing: 6) {
                 Button { showAttachMenu = true } label: { Image(systemName: "plus.circle.fill").font(.title2).foregroundStyle(DesignTheme.primary) }
-                TextField("Сообщение...", text: $input, axis: .vertical).lineLimit(1...5).padding(10).background(DesignTheme.chip, in: RoundedRectangle(cornerRadius: 18))
+                TextField("Сообщение...", text: $input, axis: .vertical).focused($inputFocused).lineLimit(1...5).padding(10).background(DesignTheme.chip, in: RoundedRectangle(cornerRadius: 18))
                 Button { if speech.isRecording { speech.stop() } else { speech.transcript = ""; speech.start() } } label: { Image(systemName: speech.isRecording ? "mic.fill" : "mic").font(.title3).foregroundStyle(speech.isRecording ? .red : .primary) }
                 if isSending { Button { stopGeneration() } label: { Image(systemName: "stop.circle.fill").font(.title2).foregroundStyle(.red) } } else { Button { send() } label: { Image(systemName: "arrow.up.circle.fill").font(.title2).foregroundStyle(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachments.isEmpty ? .gray : DesignTheme.primary) }.disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachments.isEmpty) }
             }
@@ -105,9 +109,36 @@ struct ChatView: View {
         let ext = kind == "image" ? "jpg" : "mp4"
         attachments.append(Attachment(kind: kind, fileName: "file-\(attachments.count + 1).\(ext)", mimeType: mime, base64: data.base64EncodedString()))
     }
+    func generateImage() async {
+        let prompt = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !prompt.isEmpty else { errorText = "Напиши описание картинки в поле ввода."; return }
+        isGeneratingImage = true
+        session.messages.append(ChatMessage(role: "user", content: prompt))
+        session.messages.append(ChatMessage(role: "assistant", content: "Рисую картинку...", model: settings.imageModel))
+        store.update(session); input = ""
+        do {
+            let img = try await APIClient.generateImage(settings: settings, prompt: prompt)
+            if let idx = session.messages.indices.last { session.messages[idx].content = "Готово: " + prompt; session.messages[idx].attachments = [img] }
+            store.update(session)
+        } catch {
+            if let idx = session.messages.indices.last { session.messages[idx].content = "Не удалось сгенерировать фото: " + error.localizedDescription; session.messages[idx].isError = true }
+            store.update(session)
+        }
+        isGeneratingImage = false
+    }
+    func isImageRequest(_ t: String) -> Bool {
+        let s = t.lowercased()
+        return s.contains("нарисуй") || s.contains("сгенерируй фото") || s.contains("сгенерируй картинку") || s.contains("создай картинку") || s.contains("создай фото") || s.contains("сделай картинку") || s.contains("сделай фото")
+    }
+    func isVideoRequest(_ t: String) -> Bool {
+        let s = t.lowercased()
+        return s.contains("видео") && (s.contains("сгенерируй") || s.contains("создай") || s.contains("сделай"))
+    }
     func send() {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !isSending, (!text.isEmpty || !attachments.isEmpty) else { return }
+        if isVideoRequest(text) { errorText = "Видео сгенерировать не могу: у провайдера нет endpoint для видео."; return }
+        if isImageRequest(text) && attachments.isEmpty { Task { await generateImage() }; return }
         guard !settings.selectedModel.isEmpty else { errorText = "Сначала выберите модель в меню сверху или в настройках."; return }
         let userMsg = ChatMessage(role: "user", content: text.isEmpty ? "Опиши вложение" : text, attachments: attachments)
         session.messages.append(userMsg)

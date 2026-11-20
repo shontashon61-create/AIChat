@@ -19,15 +19,31 @@ struct MarkdownView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(segments) { s in
-                if s.isCode { CodeBlockView(language: s.language, code: s.text) } else { markdownText(s.text) }
+                if s.isCode { CodeBlockView(language: s.language, code: s.text) } else { Text(attributed(s.text)) }
             }
         }
     }
-    func markdownText(_ s: String) -> some View {
-        Group {
-            if let attr = try? AttributedString(markdown: s, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)) { Text(attr) } else { Text(s) }
-        }
+    func attributed(_ raw: String) -> AttributedString {
+        var t = convertFractions(raw)
+        let u1 = extractUnderline(t, open: "++", close: "++"); t = u1.0
+        let u2 = extractUnderline(t, open: "<u>", close: "</u>"); t = u2.0
+        var attr = (try? AttributedString(markdown: t, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(t)
+        for phrase in u1.1 + u2.1 { if let r = attr.range(of: phrase) { attr[r].underlineStyle = .single } }
+        return attr
     }
+    func extractUnderline(_ input: String, open: String, close: String) -> (String, [String]) {
+        var t = input; var ranges: [String] = []
+        while let s = t.range(of: open), let e = t.range(of: close, range: s.upperBound..<t.endIndex) { let inner = String(t[s.upperBound..<e.lowerBound]); ranges.append(inner); t.replaceSubrange(s.lowerBound..<e.upperBound, with: inner) }
+        return (t, ranges)
+    }
+    func convertFractions(_ input: String) -> String {
+        var t = input
+        while let s = t.range(of: "\\frac{") { guard let m = t.range(of: "}{", range: s.upperBound..<t.endIndex), let e = t.range(of: "}", range: m.upperBound..<t.endIndex) else { break }; let a = String(t[s.upperBound..<m.lowerBound]); let b = String(t[m.upperBound..<e.lowerBound]); t.replaceSubrange(s.lowerBound..<e.upperBound, with: sup(a) + "\u{2044}" + sub(b)) }
+        while let r = t.range(of: "[0-9]+/[0-9]+", options: .regularExpression) { let parts = t[r].split(separator: "/"); if parts.count == 2 { t.replaceSubrange(r, with: sup(String(parts[0])) + "\u{2044}" + sub(String(parts[1]))) } else { break } }
+        return t
+    }
+    func sup(_ s: String) -> String { let map: [Character: String] = ["0": "\u{2070}", "1": "\u{00B9}", "2": "\u{00B2}", "3": "\u{00B3}", "4": "\u{2074}", "5": "\u{2075}", "6": "\u{2076}", "7": "\u{2077}", "8": "\u{2078}", "9": "\u{2079}", "-": "\u{207B}"]; return s.map { map[$0] ?? String($0) }.joined() }
+    func sub(_ s: String) -> String { let map: [Character: String] = ["0": "\u{2080}", "1": "\u{2081}", "2": "\u{2082}", "3": "\u{2083}", "4": "\u{2084}", "5": "\u{2085}", "6": "\u{2086}", "7": "\u{2087}", "8": "\u{2088}", "9": "\u{2089}", "-": "\u{208B}"]; return s.map { map[$0] ?? String($0) }.joined() }
 }
 
 struct CodeBlockView: View {

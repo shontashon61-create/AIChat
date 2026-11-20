@@ -46,6 +46,11 @@ class SettingsStore: ObservableObject {
     @AppStorage("showThinking") var showThinking: Bool = true
     @AppStorage("voiceEnabled") var voiceEnabled: Bool = true
     @AppStorage("autoSpeak") var autoSpeak: Bool = false
+    @AppStorage("voiceID") var voiceID: String = "ru-RU"
+    @AppStorage("voiceRate") var voiceRate: Double = 0.48
+    @AppStorage("voicePitch") var voicePitch: Double = 1.0
+    @AppStorage("imageModel") var imageModel: String = "gpt-image-1"
+    @AppStorage("imageSize") var imageSize: String = "1024x1024"
     @AppStorage("isDark") var isDark: Bool = true
     @AppStorage("appTheme") var appTheme: String = "paper"
     @AppStorage("fontSize") var fontSize: Double = 16
