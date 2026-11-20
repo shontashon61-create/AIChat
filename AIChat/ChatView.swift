@@ -26,9 +26,9 @@ struct ChatView: View {
                     LazyVStack(spacing: 14) {
                         if session.messages.isEmpty { emptyView }
                         ForEach(visibleMessages) { msg in
-                            MessageRow(message: msg, onRegenerate: regenerate, onDelete: { deleteMessage(msg) }, onEdit: { editMessage(msg) }, onPreview: { previewAttachment = $0 })
+                            MessageRow(message: msg, onRegenerate: regenerate, onDelete: { deleteMessage(msg) }, onEdit: { editMessage(msg) }, onPreview: { previewAttachment = $0 }).messageAppear()
                         }
-                        if isSending { HStack { ProgressView(); Text("ИИ печатает...").font(.caption).foregroundStyle(.secondary); Spacer() }.padding(.leading, 4) }
+                        if isSending { HStack { TypingDots(); Text("ИИ печатает...").font(.caption).foregroundStyle(.secondary); Spacer() }.padding(.leading, 4) }
                     }.padding(.horizontal).padding(.vertical, 12)
                 }
                 .onChange(of: session.messages.count) { _ in scrollToLast(proxy) }
@@ -51,10 +51,24 @@ struct ChatView: View {
     }
     func scrollToLast(_ proxy: ScrollViewProxy) { if let last = visibleMessages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } }
     var emptyView: some View {
-        VStack(spacing: 12) { Image(systemName: "sparkles").font(.system(size: 44)).foregroundStyle(DesignTheme.primary); Text("Чем помочь?").font(.title2.bold()); Text("Модель: \(settings.selectedModel.isEmpty ? "не выбрана" : settings.selectedModel)").font(.caption).foregroundStyle(.secondary); Text("Можно спросить, попросить написать текст или код, прислать фото или видео.").multilineTextAlignment(.center).foregroundStyle(.secondary).font(.subheadline) }.padding(.vertical, 40)
+        VStack(spacing: 16) {
+            Image(systemName: "sparkles").font(.system(size: 44)).foregroundStyle(DesignTheme.primary)
+            Text("Чем помочь?").font(.title2.bold())
+            if settings.selectedModel.isEmpty {
+                Button("Выбрать модель") { Task { await APIClient.fetchModels(settings: settings) } }.buttonStyle(PrimaryButtonStyle())
+                Text("Модель не выбрана — нажми, чтобы загрузить список").font(.caption).foregroundStyle(.secondary)
+            } else {
+                Text(settings.selectedModel).font(.caption).padding(.horizontal, 10).padding(.vertical, 4).background(DesignTheme.chip, in: Capsule()).foregroundStyle(.secondary)
+            }
+            Text("Можно спросить, попросить написать текст или код, прислать фото или видео.").multilineTextAlignment(.center).foregroundStyle(.secondary).font(.subheadline)
+        }.padding(.vertical, 32).padding(.horizontal)
     }
     var quickPrompts: some View {
-        ScrollView(.horizontal, showsIndicators: false) { HStack { ForEach(["Объясни простыми словами", "Напиши код", "Составь план", "Придумай идею", "Проверь текст"], id: \.self) { p in Button(p) { input = p; send() }.padding(.horizontal, 12).padding(.vertical, 8).background(DesignTheme.chip, in: Capsule()).font(.subheadline) } }.padding(.horizontal) }.padding(.bottom, 8)
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+            ForEach([("Объясни простыми словами", "text.bubble"), ("Напиши код", "chevron.left.forwardslash.chevron.right"), ("Составь план", "list.bullet"), ("Проверь текст", "checkmark.circle")], id: \.0) { p in
+                Button { Haptic.tap(); input = p.0; send() } label: { HStack { Image(systemName: p.1); Text(p.0).lineLimit(1) }.frame(maxWidth: .infinity, alignment: .leading) }.padding(.horizontal, 12).padding(.vertical, 10).background(DesignTheme.chip, in: RoundedRectangle(cornerRadius: 12)).font(.subheadline)
+            }
+        }.padding(.horizontal).padding(.bottom, 8)
     }
     var attachmentPreview: some View {
         Group {

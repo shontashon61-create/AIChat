@@ -17,7 +17,7 @@ struct ContentView: View {
                 ToolbarItem(placement: .topBarTrailing) { HStack { Button { _ = store.newChat() } label: { Image(systemName: "square.and.pencil") }; Button { showSettings = true } label: { Image(systemName: "gearshape") } } }
             }
         }
-        .preferredColorScheme(AppThemes.palette(for: settings.appTheme).isDark ? .dark : .light)
+        .preferredColorScheme(AppThemes.palette(for: settings.appTheme).isDark ? .dark : .light).tint(DesignTheme.primary)
         .sheet(isPresented: $showSettings) { SettingsView() }
         .sheet(isPresented: $showHistory) { HistoryView() }
         .task { if store.sessions.isEmpty { _ = store.newChat() }; await APIClient.fetchModels(settings: settings) }
