@@ -17,6 +17,7 @@ struct AIChatApp: App {
             .environmentObject(settings)
             .environmentObject(store)
             .preferredColorScheme(AppThemes.palette(for: settings.appTheme).isDark ? .dark : .light)
+            .onAppear { BackgroundSupport.requestNotificationPermission() }
         }
     }
 }

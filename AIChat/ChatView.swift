@@ -47,7 +47,7 @@ struct ChatView: View {
         .onChange(of: store.currentId) { _ in if let s = store.sessions.first(where: { $0.id == store.currentId }) { session = s } }
         .onChange(of: speech.transcript) { v in input = v }
         .onChange(of: speech.errorText ?? "") { v in if !v.isEmpty { errorText = v; speech.errorText = nil } }
-        .onDisappear { streamTask?.cancel(); speech.stop(); Speaker.shared.stop() }
+        .onDisappear { speech.stop(); Speaker.shared.stop() }
     }
     func scrollToLast(_ proxy: ScrollViewProxy) { if let last = visibleMessages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } }
     var emptyView: some View {
@@ -100,23 +100,25 @@ struct ChatView: View {
         startAssistantReply()
     }
     func startAssistantReply() {
+        BackgroundSupport.requestNotificationPermission()
+        BackgroundSupport.shared.begin()
         isSending = true
         session.messages.append(ChatMessage(role: "assistant", content: "", model: settings.selectedModel))
         let history = Array(session.messages.dropLast())
         streamTask = Task {
             do {
                 try await APIClient.streamChat(settings: settings, messages: history, onContent: { chunk in DispatchQueue.main.async { guard let idx = session.messages.indices.last else { return }; session.messages[idx].content += chunk } }, onThinking: { chunk in DispatchQueue.main.async { guard let idx = session.messages.indices.last else { return }; session.messages[idx].thinking = (session.messages[idx].thinking ?? "") + chunk } })
-                await MainActor.run { store.update(session); isSending = false; if settings.autoSpeak, let last = session.messages.last { Speaker.shared.speak(last.content) } }
+                await MainActor.run { store.update(session); isSending = false; BackgroundSupport.notifyAnswerReady(); BackgroundSupport.shared.end(); if settings.autoSpeak, let last = session.messages.last { Speaker.shared.speak(last.content) } }
             } catch {
                 await MainActor.run {
-                    if Task.isCancelled { isSending = false; return }
+                    if Task.isCancelled { store.update(session); isSending = false; BackgroundSupport.shared.end(); return }
                     if let idx = session.messages.indices.last, session.messages[idx].content.isEmpty { session.messages[idx].content = "Ошибка: " + error.localizedDescription + ". Проверьте Base URL, ключ и модель в настройках."; session.messages[idx].isError = true } else { errorText = error.localizedDescription }
-                    store.update(session); isSending = false
+                    store.update(session); isSending = false; BackgroundSupport.shared.end()
                 }
             }
         }
     }
-    func stopGeneration() { streamTask?.cancel(); streamTask = nil; isSending = false; store.update(session) }
+    func stopGeneration() { streamTask?.cancel(); streamTask = nil; isSending = false; store.update(session); BackgroundSupport.shared.end() }
     func regenerate() {
         guard !isSending else { return }
         while session.messages.last?.role == "assistant" { session.messages.removeLast() }
