@@ -35,7 +35,7 @@ struct ModelPickerMenu: View {
             Button("Обновить модели") { Task { await APIClient.fetchModels(settings: settings) } }
             if let e = settings.modelsError { Text(e) }
         } label: {
-            HStack(spacing: 4) { Text(shortName).lineLimit(1).truncationMode(.middle).font(.callout.bold()); Image(systemName: "chevron.down").font(.caption2) }.frame(maxWidth: 160).padding(.horizontal, 10).padding(.vertical, 7).background(DesignTheme.chip, in: Capsule()).overlay(Capsule().stroke(DesignTheme.border))
+            HStack(spacing: 4) { Text(shortName).lineLimit(1).truncationMode(.middle).font(.callout.bold()).frame(minWidth: 0, maxWidth: .infinity); Image(systemName: "chevron.down").font(.caption2) }.padding(.horizontal, 10).padding(.vertical, 7).background(DesignTheme.chip, in: Capsule()).overlay(Capsule().stroke(DesignTheme.border))
         }.layoutPriority(1)
     }
 }

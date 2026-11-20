@@ -66,9 +66,9 @@ struct ChatView: View {
         }.padding(.vertical, 32).padding(.horizontal)
     }
     var quickPrompts: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-            ForEach([("Объясни просто", "text.bubble"), ("Напиши код", "chevron.left.forwardslash.chevron.right"), ("Составь план", "list.bullet"), ("Проверь текст", "checkmark.circle")], id: \.0) { p in
-                Button { Haptic.tap(); if settings.selectedModel.isEmpty { showModelSheet = true } else { input = p.0; send() } } label: { HStack(alignment: .top, spacing: 6) { Image(systemName: p.1).font(.caption); Text(p.0).lineLimit(2).multilineTextAlignment(.leading) }.frame(maxWidth: .infinity, alignment: .leading) }.padding(.horizontal, 10).padding(.vertical, 10).background(DesignTheme.chip, in: RoundedRectangle(cornerRadius: 12)).font(.callout)
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 280), spacing: 8)], spacing: 8) {
+            ForEach([("Объясни простыми словами", "text.bubble"), ("Напиши код", "chevron.left.forwardslash.chevron.right"), ("Составь план", "list.bullet"), ("Проверь текст", "checkmark.circle")], id: \.0) { p in
+                Button { Haptic.tap(); if settings.selectedModel.isEmpty { showModelSheet = true } else { input = p.0; send() } } label: { HStack(alignment: .top, spacing: 6) { Image(systemName: p.1).font(.caption); Text(p.0).lineLimit(2).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true).minimumScaleFactor(0.85) }.frame(maxWidth: .infinity, alignment: .leading) }.padding(.horizontal, 10).padding(.vertical, 10).background(DesignTheme.chip, in: RoundedRectangle(cornerRadius: 12)).font(.callout)
             }
         }.padding(.horizontal).padding(.bottom, 8)
     }

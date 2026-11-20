@@ -7,17 +7,20 @@ struct AIChatApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if !settings.hasSeenOnboarding {
-                    OnboardingView()
-                } else {
-                    ContentView()
+            ZStack {
+                DesignTheme.background.ignoresSafeArea()
+                Group {
+                    if !settings.hasSeenOnboarding {
+                        OnboardingView()
+                    } else {
+                        ContentView()
+                    }
                 }
+                .environmentObject(settings)
+                .environmentObject(store)
+                .preferredColorScheme(AppThemes.palette(for: settings.appTheme).isDark ? .dark : .light)
+                .onAppear { BackgroundSupport.requestNotificationPermission() }
             }
-            .environmentObject(settings)
-            .environmentObject(store)
-            .preferredColorScheme(AppThemes.palette(for: settings.appTheme).isDark ? .dark : .light)
-            .onAppear { BackgroundSupport.requestNotificationPermission() }
         }
     }
 }

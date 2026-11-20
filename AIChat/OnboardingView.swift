@@ -12,7 +12,7 @@ struct OnboardingView: View {
             }.tabViewStyle(.page(indexDisplayMode: .always)).frame(maxHeight: 420)
             Button(page == 2 ? "Начать" : "Далее") { if page == 2 { settings.hasSeenOnboarding = true } else { page += 1 } }.buttonStyle(PrimaryButtonStyle())
             if page < 2 { Button("Пропустить") { settings.hasSeenOnboarding = true }.font(.caption) }
-        }.padding().background(DesignTheme.background)
+        }.padding().background(DesignTheme.background.ignoresSafeArea())
     }
     func pageView(title: String, text: String, icon: String) -> some View {
         VStack(spacing: 16) { Image(systemName: icon).font(.system(size: 44)).foregroundStyle(DesignTheme.primary); Text(title).font(.title2.bold()); Text(text).multilineTextAlignment(.center).foregroundStyle(.secondary).padding(.horizontal) }
