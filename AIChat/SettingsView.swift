@@ -8,6 +8,7 @@ struct SettingsView: View {
     @State private var testResult: String?
     @State private var exportURL: URL?
     @State private var showShare = false
+    @State private var voiceRefresh = UUID()
     let presets: [(String, String)] = [("Помощник", "Ты — полезный ИИ-ассистент. Отвечай на русском, кратко и по делу."), ("Программист", "Ты — опытный программист. Пиши чистый код, объясняй коротко, указывай файлы и строки."), ("Переводчик", "Ты — переводчик. Переводи точно, сохраняй стиль и смысл оригинала."), ("Учитель", "Ты — терпеливый учитель. Объясняй простыми словами, шаг за шагом, с примерами.")]
     var body: some View {
         NavigationStack {
@@ -39,6 +40,7 @@ struct SettingsView: View {
                         Text("Генерация картинок").font(.subheadline)
                         TextField("Модель картинок", text: $settings.imageModel).autocorrectionDisabled().textInputAutocapitalization(.never).padding(10).background(DesignTheme.chip, in: RoundedRectangle(cornerRadius: 10))
                         Picker("Размер картинки", selection: $settings.imageSize) { Text("1024 × 1024").tag("1024x1024"); Text("1024 × 1792").tag("1024x1792"); Text("1792 × 1024").tag("1792x1024") }
+                        Picker("Стиль картинки", selection: $settings.imageStyle) { Text("Авто").tag("auto"); Text("Фотореализм").tag("photorealistic"); Text("Аниме").tag("anime"); Text("3D").tag("3d render"); Text("Акварель").tag("watercolor"); Text("Пиксель-арт").tag("pixel art") }
                         Text("В чате нажми + и выбери «Сгенерировать фото» — текст из поля ввода уйдёт как описание. Видео зависит от провайдера: стандартного OpenAI-совместимого endpoint для видео нет, приложение честно покажет ошибку провайдера.").font(.caption).foregroundStyle(.secondary)
                     }.cardStyle()
                     VStack(alignment: .leading, spacing: 12) {
@@ -48,7 +50,9 @@ struct SettingsView: View {
                         HStack { Text("Размер шрифта"); Slider(value: $settings.fontSize, in: 14...20, step: 1); Text("\(Int(settings.fontSize))") }
                         Toggle("Озвучка ответов", isOn: $settings.voiceEnabled)
                         Toggle("Озвучивать автоматически", isOn: $settings.autoSpeak)
-                        Picker("Голос", selection: $settings.voiceID) { Text("Русский").tag("ru-RU"); Text("Английский US").tag("en-US"); Text("Английский GB").tag("en-GB"); Text("Немецкий").tag("de-DE"); Text("Французский").tag("fr-FR") }
+                        Picker("Голос", selection: $settings.voiceID) { Text("По умолчанию").tag(""); ForEach(VoiceCatalog.sortedVoices(), id: \.identifier) { v in Text("\(v.name) (\(v.language))").tag(v.identifier) } }.id(voiceRefresh)
+                        Text("Голоса нельзя скачать файлом в приложение — они системные. Приятные уже есть в iOS: Милена, Юрий — русский; Samantha, Ava, Daniel — английский. Новые: Настройки iPhone → Универсальный доступ → Устный контент → Голоса.").font(.caption).foregroundStyle(.secondary)
+                        HStack { Button("Скачать ещё голоса") { VoiceCatalog.openVoiceSettings() }; Button("Обновить список") { voiceRefresh = UUID() } }.font(.caption)
                         HStack { Text("Скорость речи"); Slider(value: $settings.voiceRate, in: 0.30...0.65, step: 0.01); Text(String(format: "%.2f", settings.voiceRate)) }
                         HStack { Text("Высота голоса"); Slider(value: $settings.voicePitch, in: 0.5...2.0, step: 0.1); Text(String(format: "%.1f", settings.voicePitch)) }
                         Button("Проверить голос") { Speaker.shared.speak("Привет! Это проверка голоса и скорости речи.") }.font(.caption)

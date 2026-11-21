@@ -53,6 +53,7 @@ class APIClient {
         let trimmed = Array(messages.suffix(max(1, settings.contextLimit)))
         var apiMessages: [[String: Any]] = []
         if !settings.systemPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { apiMessages.append(["role": "system", "content": settings.systemPrompt]) }
+        apiMessages.append(["role": "system", "content": "Ты умеешь генерировать фото прямо в этом диалоге, как ассистент с генерацией картинок. Когда пользователь просит нарисовать, сгенерировать, показать картинку, визуализировать твой ответ, сделать схему или иллюстрацию — или когда картинка явно улучшит ответ — добавь в конце ответа отдельную строку [IMAGE: detailed visual prompt in English, style, composition, colors, no text unless requested]. Можно до 3 таких строк для разных картинок. Не объясняй про маркер и не пиши, что не умеешь генерировать фото. Если в чате есть фото и просят вставить ответы, отредактировать или написать на нём — отвечай пронумерованным списком, каждый ответ с новой строки, фразеологизм — объяснение через тире."])
         for m in trimmed {
             if m.role == "user" && !m.attachments.isEmpty {
                 var parts: [[String: Any]] = []
@@ -93,7 +94,7 @@ class APIClient {
         guard let url = URL(string: settings.cleanBaseURL + "/images/generations") else { throw URLError(.badURL) }
         var req = URLRequest(url: url, timeoutInterval: 120); req.httpMethod = "POST"; req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if !settings.apiKey.isEmpty { req.setValue("Bearer \(settings.apiKey)", forHTTPHeaderField: "Authorization") }
-        req.httpBody = try JSONSerialization.data(withJSONObject: ["model": settings.imageModel, "prompt": prompt, "size": settings.imageSize, "n": 1])
+        let styledPrompt = settings.imageStyle == "auto" ? prompt : prompt + ", style: " + settings.imageStyle; req.httpBody = try JSONSerialization.data(withJSONObject: ["model": settings.imageModel, "prompt": styledPrompt, "size": settings.imageSize, "n": 1])
         let (data, resp) = try await URLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else { let body = String(data: data, encoding: .utf8) ?? ""; throw NSError(domain: "API", code: (resp as? HTTPURLResponse)?.statusCode ?? 0, userInfo: [NSLocalizedDescriptionKey: "Генерация фото: HTTP \((resp as? HTTPURLResponse)?.statusCode ?? 0): \(String(body.prefix(400)))"]) }
         let decoded = try JSONDecoder().decode(ImageResponse.self, from: data)

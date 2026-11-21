@@ -93,8 +93,29 @@ class SpeechManager: NSObject, ObservableObject {
     }
 }
 
+enum VoiceCatalog {
+    static let pleasantNames = ["Milena", "Yuri", "Samantha", "Ava", "Daniel", "Karen", "Moira", "Tessa", "Zira", "Veena", "Fiona", "Alex", "Victoria"]
+    static func sortedVoices() -> [AVSpeechSynthesisVoice] {
+        AVSpeechSynthesisVoice.speechVoices().sorted { a, b in
+            let rank: (String) -> Int = { $0.hasPrefix("ru") ? 0 : $0.hasPrefix("en-US") ? 1 : $0.hasPrefix("en") ? 2 : 3 }
+            if rank(a.language) != rank(b.language) { return rank(a.language) < rank(b.language) }
+            let ai = pleasantNames.firstIndex(of: a.name) ?? 99
+            let bi = pleasantNames.firstIndex(of: b.name) ?? 99
+            if ai != bi { return ai < bi }
+            return a.name < b.name
+        }
+    }
+    static func voice(for id: String) -> AVSpeechSynthesisVoice? {
+        if id.isEmpty { return nil }
+        if let v = AVSpeechSynthesisVoice(identifier: id) { return v }
+        if id.count == 5 { return AVSpeechSynthesisVoice(language: id) }
+        return AVSpeechSynthesisVoice.speechVoices().first { $0.identifier == id }
+    }
+    static func openVoiceSettings() { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } }
+}
+
 class Speaker: NSObject, AVSpeechSynthesizerDelegate {
     static let shared = Speaker(); private let synth = AVSpeechSynthesizer()
-    func speak(_ text: String) { stop(); let clean = cleanForSpeech(text); guard !clean.isEmpty else { return }; let u = AVSpeechUtterance(string: String(clean.prefix(1200))); let lang = UserDefaults.standard.string(forKey: "voiceID") ?? "ru-RU"; u.voice = AVSpeechSynthesisVoice(language: lang.isEmpty ? "ru-RU" : lang) ?? AVSpeechSynthesisVoice(language: "ru-RU"); let r = UserDefaults.standard.double(forKey: "voiceRate"); u.rate = Float(r == 0 ? 0.48 : r); let p = UserDefaults.standard.double(forKey: "voicePitch"); u.pitchMultiplier = Float(p == 0 ? 1.0 : p); synth.speak(u) }
+    func speak(_ text: String) { stop(); let clean = cleanForSpeech(text); guard !clean.isEmpty else { return }; let u = AVSpeechUtterance(string: String(clean.prefix(1200))); let id = UserDefaults.standard.string(forKey: "voiceID") ?? ""; u.voice = VoiceCatalog.voice(for: id) ?? AVSpeechSynthesisVoice(language: "ru-RU"); let r = UserDefaults.standard.double(forKey: "voiceRate"); u.rate = Float(r == 0 ? 0.48 : r); let p = UserDefaults.standard.double(forKey: "voicePitch"); u.pitchMultiplier = Float(p == 0 ? 1.0 : p); synth.speak(u) }
     func stop() { if synth.isSpeaking { synth.stopSpeaking(at: .immediate) } }
 }
