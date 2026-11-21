@@ -34,6 +34,12 @@ struct MessageAppear: ViewModifier {
     }
 }
 
+struct PulseIcon: ViewModifier {
+    @State private var on = false
+    func body(content: Content) -> some View { content.scaleEffect(on ? 1.08 : 1).opacity(on ? 1 : 0.85).onAppear { withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) { on = true } } }
+}
+
 extension View {
     func messageAppear() -> some View { modifier(MessageAppear()) }
+    func pulseIcon() -> some View { modifier(PulseIcon()) }
 }

@@ -7,8 +7,8 @@ struct OnboardingView: View {
         VStack(spacing: 24) {
             TabView(selection: $page) {
                 pageView(title: "Чаты без лишнего", text: "Стриминг, ход мыслей и код с кнопкой копирования.", icon: "text.bubble").tag(0)
-                pageView(title: "Фото, видео и голос", text: "Прикрепляйте файлы, диктуйте и слушайте ответы.", icon: "mic").tag(1)
-                pageView(title: "Свой API и темы", text: "Любой OpenAI-совместимый адрес, свой промт и 6 тем оформления.", icon: "paintpalette").tag(2)
+                pageView(title: "Фото, видео и голос", text: "Прикрепляйте файлы, диктуйте и слушайте ответы. Скажи «сделай дз» с фото тетрадки — ответы впишутся синей ручкой, а «нарисуй» сгенерирует картинку прямо в чате.", icon: "mic").tag(1)
+                pageView(title: "Свой API и темы", text: "Любой OpenAI-совместимый адрес, свой промт и 26 тем оформления, голоса и скорость речи на выбор.", icon: "paintpalette").tag(2)
             }.tabViewStyle(.page(indexDisplayMode: .always)).frame(maxHeight: 420)
             Button(page == 2 ? "Начать" : "Далее") { if page == 2 { settings.hasSeenOnboarding = true } else { page += 1 } }.buttonStyle(PrimaryButtonStyle())
             if page < 2 { Button("Пропустить") { settings.hasSeenOnboarding = true }.font(.caption) }

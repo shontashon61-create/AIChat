@@ -59,7 +59,7 @@ struct ChatView: View {
     func scrollToLast(_ proxy: ScrollViewProxy) { if let last = visibleMessages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } }
     var emptyView: some View {
         VStack(spacing: 16) {
-            Image(systemName: "sparkles").font(.system(size: 44)).foregroundStyle(DesignTheme.primary)
+            Image(systemName: "sparkles").font(.system(size: 44)).foregroundStyle(DesignTheme.primary).pulseIcon()
             Text("Чем помочь?").font(.title2.bold())
             if settings.selectedModel.isEmpty {
                 Button("Выбрать модель") { showModelSheet = true }.buttonStyle(PrimaryButtonStyle())
@@ -228,10 +228,12 @@ struct AttachmentThumbView: View {
 struct AttachmentPreviewView: View {
     let attachment: Attachment
     @Environment(\.dismiss) var dismiss
+    @State private var scale: CGFloat = 1
+    @State private var lastScale: CGFloat = 1
     var body: some View {
         NavigationStack {
             Group {
-                if attachment.kind == "image", let data = Data(base64Encoded: attachment.base64), let ui = UIImage(data: data) { Image(uiImage: ui).resizable().scaledToFit().padding() }
+                if attachment.kind == "image", let data = Data(base64Encoded: attachment.base64), let ui = UIImage(data: data) { Image(uiImage: ui).resizable().scaledToFit().padding().scaleEffect(scale).gesture(MagnificationGesture().onChanged { v in scale = max(1, min(4, lastScale * v)) }.onEnded { _ in lastScale = scale }).onTapGesture(count: 2) { withAnimation(AppAnim.spring) { scale = scale > 1 ? 1 : 2; lastScale = scale } } }
                 else { VStack(spacing: 12) { Image(systemName: "video.fill").font(.largeTitle); Text(attachment.fileName); Text(String(format: "%.1f МБ", attachment.sizeMB)).foregroundStyle(.secondary) } }
             }.navigationTitle(attachment.fileName).toolbar { ToolbarItem(placement: .topBarLeading) { if attachment.kind == "image", let data = Data(base64Encoded: attachment.base64), let ui = UIImage(data: data) { Button("Сохранить") { UIImageWriteToSavedPhotosAlbum(ui, nil, nil, nil); UIPasteboard.general.image = ui } } }; ToolbarItem(placement: .topBarTrailing) { Button("Закрыть") { dismiss() } } }
         }
@@ -258,11 +260,13 @@ struct MessageRow: View {
             Group {
                 if message.role == "assistant" { MarkdownView(text: message.content.isEmpty ? "..." : message.content) } else { Text(message.content.isEmpty ? "..." : message.content) }
             }.font(.system(size: settings.fontSize)).padding(12).background(message.role == "user" ? DesignTheme.primary : DesignTheme.chip, in: RoundedRectangle(cornerRadius: 16)).foregroundStyle(message.role == "user" ? DesignTheme.onPrimary : DesignTheme.text).frame(maxWidth: .infinity, alignment: message.role == "user" ? .trailing : .leading).textSelection(.enabled)
+            .contextMenu { Button { UIPasteboard.general.string = message.content; Haptic.success() } label: { Label("Копировать полностью", systemImage: "doc.on.doc") }; if message.role == "assistant" { Button { Speaker.shared.speak(message.content) } label: { Label("Озвучить", systemImage: "speaker.wave.2") }; Button(action: onVisualize) { Label("Визуализировать", systemImage: "photo.badge.plus") }; Button(action: onAnnotate) { Label("Вставить ответы в фото", systemImage: "pencil.and.outline") }; ShareLink(item: message.content) { Label("Поделиться", systemImage: "square.and.arrow.up") } }; Button(role: .destructive, action: onDelete) { Label("Удалить", systemImage: "trash") } }
             HStack(spacing: 4) {
                 Text(message.createdAt, style: .time).font(.caption2).foregroundStyle(.secondary)
                 if message.role == "assistant" && !message.content.isEmpty {
                     HStack(spacing: 14) {
-                        Button { UIPasteboard.general.string = message.content; copied = true; DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { copied = false } } label: { HStack(spacing: 4) { Image(systemName: copied ? "checkmark" : "doc.on.doc"); if copied { Text("Скопировано") } } }
+                        Button { UIPasteboard.general.string = message.content; Haptic.success(); copied = true; DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { copied = false } } label: { HStack(spacing: 4) { Image(systemName: copied ? "checkmark" : "doc.on.doc"); if copied { Text("Скопировано") } } }
+                        ShareLink(item: message.content) { Image(systemName: "square.and.arrow.up") }
                         Button { Speaker.shared.speak(message.content) } label: { Image(systemName: "speaker.wave.2") }
                         Button(action: onAnnotate) { Image(systemName: "pencil.and.outline") }
                         Button(action: onVisualize) { Image(systemName: "photo.badge.plus") }
