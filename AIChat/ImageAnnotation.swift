@@ -68,7 +68,8 @@ enum ImageAnnotator {
         return Attachment(kind: "image", fileName: "answered.jpg", mimeType: "image/jpeg", base64: data.base64EncodedString())
     }
 
-    static func handwritingFont(ofSize size: CGFloat) -> UIFont {
+    static func handwritingFont(ofSize size: CGFloat, text: String = "") -> UIFont {
+        if text.contains(where: { $0.unicodeScalars.contains { (0x0400...0x04FF).contains($0.value) } }) { return UIFont.italicSystemFont(ofSize: size) }
         for name in ["Noteworthy-Light", "Noteworthy", "BradleyHandITCTT-Bold", "MarkerFelt-Thin"] {
             if let f = UIFont(name: name, size: size) { return f }
         }
@@ -77,7 +78,7 @@ enum ImageAnnotator {
 
     static func sup(_ s: String) -> String { let map: [Character: String] = ["0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "-": "⁻"]; return s.map { map[$0] ?? String($0) }.joined() }
     static func sub(_ s: String) -> String { let map: [Character: String] = ["0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉", "-": "₋"]; return s.map { map[$0] ?? String($0) }.joined() }
-    static func convertFractions(_ input: String) -> String { var t = input; while let r = t.range(of: "[0-9]+/[0-9]+", options: .regularExpression) { let parts = t[r].split(separator: "/"); if parts.count == 2 { t.replaceSubrange(r, with: sup(String(parts[0])) + "⁄" + sub(String(parts[1]))) } else { break } }; return t }
+    static func convertFractions(_ input: String) -> String { var t = input; while let s = t.range(of: "\\frac{") { guard let m = t.range(of: "}{", range: s.upperBound..<t.endIndex), let e = t.range(of: "}", range: m.upperBound..<t.endIndex) else { break }; let a = String(t[s.upperBound..<m.lowerBound]); let b = String(t[m.upperBound..<e.lowerBound]); t.replaceSubrange(s.lowerBound..<e.upperBound, with: sup(a) + "⁄" + sub(b)) }; while let r = t.range(of: "[0-9]+/[0-9]+", options: .regularExpression) { let parts = t[r].split(separator: "/"); if parts.count == 2 { t.replaceSubrange(r, with: sup(String(parts[0])) + "⁄" + sub(String(parts[1]))) } else { break } }; return t }
     static func wrappedUnderlineLines(_ text: String, font: UIFont, width: CGFloat) -> [[(String, Bool)]] {
         var result: [[(String, Bool)]] = []
         let attrs: [NSAttributedString.Key: Any] = [.font: font]
@@ -134,7 +135,7 @@ enum ImageAnnotator {
         let h = image.size.height
         let scale = max(0.8, w / 1000.0)
         let fontSize: CGFloat = 44 * scale
-        let font = handwritingFont(ofSize: fontSize)
+        let font = handwritingFont(ofSize: fontSize, text: clean)
         let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: penBlue]
         let marginX = w * 0.08
         let marginTop = h * 0.06

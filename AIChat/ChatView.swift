@@ -34,7 +34,7 @@ struct ChatView: View {
                         ForEach(Array(visibleMessages.enumerated()), id: \.element.id) { idx, msg in
                             VStack(spacing: 8) {
                                 if idx == 0 || !Calendar.current.isDate(visibleMessages[idx - 1].createdAt, inSameDayAs: msg.createdAt) { Text(msg.createdAt, style: .date).font(.caption2).foregroundStyle(.secondary).padding(.horizontal, 10).padding(.vertical, 4).background(DesignTheme.chip, in: Capsule()) }
-                                MessageRow(message: msg, onRegenerate: regenerate, onDelete: { deleteMessage(msg) }, onEdit: { editMessage(msg) }, onPreview: { previewAttachment = $0 }, onAnnotate: { annotateAnswers(for: msg) }, onVisualize: { visualizeAnswer(msg) }, onContinue: { continueAnswer() }, onRegenerateImage: { regenerateImage(for: msg) }, onFavorite: { toggleFavorite(msg) }).messageAppear()
+                                MessageRow(message: msg, onRegenerate: regenerate, onDelete: { deleteMessage(msg) }, onEdit: { editMessage(msg) }, onPreview: { previewAttachment = $0 }, onAnnotate: { annotateAnswers(for: msg) }, onVisualize: { visualizeAnswer(msg) }, onContinue: { continueAnswer() }, onRegenerateImage: { regenerateImage(for: msg) }, onFavorite: { toggleFavorite(msg) }, onWriteOnto: { writeTextOntoPhoto(for: msg) }).messageAppear()
                             }
                         }
                         if isSending { HStack { TypingDots(); Text("ИИ печатает...").font(.caption).foregroundStyle(.secondary); Spacer(); Button("Стоп") { stopGeneration() }.font(.caption.bold()).foregroundStyle(.red) }.padding(.leading, 4) }
@@ -305,6 +305,7 @@ struct MessageRow: View {
     let onContinue: () -> Void
     let onRegenerateImage: () -> Void
     let onFavorite: () -> Void
+    let onWriteOnto: () -> Void
     var body: some View {
         VStack(alignment: message.role == "user" ? .trailing : .leading, spacing: 6) {
             if let thinking = message.thinking, !thinking.isEmpty, settings.showThinking, message.role == "assistant" {
@@ -325,6 +326,7 @@ struct MessageRow: View {
                         Button { Speaker.shared.stop() } label: { Image(systemName: "speaker.slash") }
                         Button(action: onContinue) { Image(systemName: "text.append") }
                         Button(action: onAnnotate) { Image(systemName: "pencil.and.outline") }
+                        Button(action: onWriteOnto) { Image(systemName: "pencil.line") }
                         Button(action: onVisualize) { Image(systemName: "photo.badge.plus") }
                         if message.attachments.contains(where: { $0.fileName.contains("generated") }) { Button(action: onRegenerateImage) { Image(systemName: "photo.on.rectangle.angled") } }
                         Button(action: onFavorite) { Image(systemName: message.isFavorite ? "star.fill" : "star") }
