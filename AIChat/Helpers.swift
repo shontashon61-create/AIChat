@@ -117,5 +117,6 @@ enum VoiceCatalog {
 class Speaker: NSObject, AVSpeechSynthesizerDelegate {
     static let shared = Speaker(); private let synth = AVSpeechSynthesizer()
     func speak(_ text: String) { stop(); let clean = cleanForSpeech(text); guard !clean.isEmpty else { return }; let u = AVSpeechUtterance(string: String(clean.prefix(1200))); let id = UserDefaults.standard.string(forKey: "voiceID") ?? ""; u.voice = VoiceCatalog.voice(for: id) ?? AVSpeechSynthesisVoice(language: "ru-RU"); let r = UserDefaults.standard.double(forKey: "voiceRate"); u.rate = Float(r == 0 ? 0.48 : r); let p = UserDefaults.standard.double(forKey: "voicePitch"); u.pitchMultiplier = Float(p == 0 ? 1.0 : p); synth.speak(u) }
+    var isSpeaking: Bool { synth.isSpeaking }
     func stop() { if synth.isSpeaking { synth.stopSpeaking(at: .immediate) } }
 }

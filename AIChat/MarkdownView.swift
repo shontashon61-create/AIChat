@@ -19,15 +19,21 @@ struct MarkdownView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(segments) { s in
-                if s.isCode { CodeBlockView(language: s.language, code: s.text) } else { Text(attributed(s.text)) }
+                if s.isCode { CodeBlockView(language: s.language, code: s.text) } else if let rows = tableRows(s.text) { MarkdownTableView(rows: rows) } else { Text(attributed(s.text)) }
             }
         }
+    }
+    func tableRows(_ raw: String) -> [[String]]? {
+        let lines = raw.components(separatedBy: .newlines).filter { $0.trimmingCharacters(in: .whitespaces).hasPrefix("|") }
+        guard lines.count >= 2 else { return nil }
+        let rows = lines.filter { !$0.contains("---") }.map { line in line.split(separator: "|").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty } }
+        return rows.isEmpty ? nil : rows
     }
     func attributed(_ raw: String) -> AttributedString {
         var t = convertFractions(raw)
         let u1 = extractUnderline(t, open: "++", close: "++"); t = u1.0
         let u2 = extractUnderline(t, open: "<u>", close: "</u>"); t = u2.0
-        var attr = (try? AttributedString(markdown: t, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(t)
+        var attr = (try? AttributedString(markdown: t, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .full))) ?? AttributedString(t)
         for phrase in u1.1 + u2.1 { if let r = attr.range(of: phrase) { attr[r].underlineStyle = .single } }
         return attr
     }
@@ -44,6 +50,21 @@ struct MarkdownView: View {
     }
     func sup(_ s: String) -> String { let map: [Character: String] = ["0": "\u{2070}", "1": "\u{00B9}", "2": "\u{00B2}", "3": "\u{00B3}", "4": "\u{2074}", "5": "\u{2075}", "6": "\u{2076}", "7": "\u{2077}", "8": "\u{2078}", "9": "\u{2079}", "-": "\u{207B}"]; return s.map { map[$0] ?? String($0) }.joined() }
     func sub(_ s: String) -> String { let map: [Character: String] = ["0": "\u{2080}", "1": "\u{2081}", "2": "\u{2082}", "3": "\u{2083}", "4": "\u{2084}", "5": "\u{2085}", "6": "\u{2086}", "7": "\u{2087}", "8": "\u{2088}", "9": "\u{2089}", "-": "\u{208B}"]; return s.map { map[$0] ?? String($0) }.joined() }
+}
+
+struct MarkdownTableView: View {
+    let rows: [[String]]
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(rows.indices, id: \.self) { i in
+                HStack(spacing: 0) {
+                    ForEach(rows[i].indices, id: \.self) { j in
+                        Text(rows[i][j]).font(i == 0 ? .caption.bold() : .caption).padding(6).frame(maxWidth: .infinity, alignment: .leading).background(i == 0 ? DesignTheme.chip : Color.clear).border(DesignTheme.border)
+                    }
+                }
+            }
+        }.clipShape(RoundedRectangle(cornerRadius: 8))
+    }
 }
 
 struct CodeBlockView: View {

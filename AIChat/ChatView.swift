@@ -30,7 +30,7 @@ struct ChatView: View {
                     LazyVStack(spacing: 14) {
                         if session.messages.isEmpty { emptyView }
                         ForEach(visibleMessages) { msg in
-                            MessageRow(message: msg, onRegenerate: regenerate, onDelete: { deleteMessage(msg) }, onEdit: { editMessage(msg) }, onPreview: { previewAttachment = $0 }, onAnnotate: { annotateAnswers(for: msg) }, onVisualize: { visualizeAnswer(msg) }).messageAppear()
+                            MessageRow(message: msg, onRegenerate: regenerate, onDelete: { deleteMessage(msg) }, onEdit: { editMessage(msg) }, onPreview: { previewAttachment = $0 }, onAnnotate: { annotateAnswers(for: msg) }, onVisualize: { visualizeAnswer(msg) }, onContinue: { continueAnswer() }, onRegenerateImage: { regenerateImage(for: msg) }).messageAppear()
                         }
                         if isSending { HStack { TypingDots(); Text("ИИ печатает...").font(.caption).foregroundStyle(.secondary); Spacer(); Button("Стоп") { stopGeneration() }.font(.caption.bold()).foregroundStyle(.red) }.padding(.leading, 4) }
                     }.padding(.horizontal).padding(.vertical, 12)
@@ -162,7 +162,7 @@ struct ChatView: View {
         guard !settings.selectedModel.isEmpty else { errorText = "Сначала выберите модель в меню сверху или в настройках."; return }
         let userMsg = ChatMessage(role: "user", content: text.isEmpty ? "Опиши вложение" : text, attachments: attachments)
         session.messages.append(userMsg)
-        if session.title == "Новый чат" || session.title.isEmpty { session.title = String(text.prefix(36)).isEmpty ? "Фото / видео" : String(text.prefix(36)) }
+        if session.title == "Новый чат" || session.title.isEmpty { session.title = autoTitle(from: text) }
         store.update(session); input = ""; attachments = []
         startAssistantReply()
     }
@@ -198,6 +198,25 @@ struct ChatView: View {
         let source = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !source.isEmpty else { return }
         Task { await generateImage(promptOverride: "Визуализация: " + String(source.prefix(600))) }
+    }
+    func autoTitle(from text: String) -> String {
+        var t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if t.isEmpty { return "Фото / видео" }
+        for p in ["сделай за меня ", "сделай ", "нарисуй ", "объясни ", "напиши "] { if t.lowercased().hasPrefix(p) { t = String(t.dropFirst(p.count)); break } }
+        t = t.prefix(1).uppercased() + t.dropFirst()
+        if t.count > 36 { t = String(t.prefix(36)).trimmingCharacters(in: .whitespaces) + "…" }
+        return t
+    }
+    func continueAnswer() {
+        guard !isSending, let last = session.messages.last, last.role == "assistant" else { return }
+        session.messages.append(ChatMessage(role: "user", content: "Продолжи ответ"))
+        store.update(session); startAssistantReply()
+    }
+    func regenerateImage(for message: ChatMessage) {
+        guard message.content.hasPrefix("Готово: ") else { return }
+        let prompt = message.content.replacingOccurrences(of: "Готово: ", with: "")
+        guard !prompt.isEmpty else { return }
+        Task { await generateImage(promptOverride: prompt) }
     }
     func stopGeneration() { streamTask?.cancel(); streamTask = nil; isSending = false; store.update(session); BackgroundSupport.shared.end() }
     func regenerate() {
@@ -251,6 +270,8 @@ struct MessageRow: View {
     let onPreview: (Attachment) -> Void
     let onAnnotate: () -> Void
     let onVisualize: () -> Void
+    let onContinue: () -> Void
+    let onRegenerateImage: () -> Void
     var body: some View {
         VStack(alignment: message.role == "user" ? .trailing : .leading, spacing: 6) {
             if let thinking = message.thinking, !thinking.isEmpty, settings.showThinking, message.role == "assistant" {
@@ -268,8 +289,11 @@ struct MessageRow: View {
                         Button { UIPasteboard.general.string = message.content; Haptic.success(); copied = true; DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { copied = false } } label: { HStack(spacing: 4) { Image(systemName: copied ? "checkmark" : "doc.on.doc"); if copied { Text("Скопировано") } } }
                         ShareLink(item: message.content) { Image(systemName: "square.and.arrow.up") }
                         Button { Speaker.shared.speak(message.content) } label: { Image(systemName: "speaker.wave.2") }
+                        Button { Speaker.shared.stop() } label: { Image(systemName: "speaker.slash") }
+                        Button(action: onContinue) { Image(systemName: "text.append") }
                         Button(action: onAnnotate) { Image(systemName: "pencil.and.outline") }
                         Button(action: onVisualize) { Image(systemName: "photo.badge.plus") }
+                        if message.attachments.contains(where: { $0.fileName.contains("generated") }) { Button(action: onRegenerateImage) { Image(systemName: "photo.on.rectangle.angled") } }
                         Button(action: onRegenerate) { Image(systemName: "arrow.clockwise") }
                         Button(action: onDelete) { Image(systemName: "trash") }
                         if let m = message.model { Text(m).font(.caption2).foregroundStyle(.secondary).lineLimit(1) }
