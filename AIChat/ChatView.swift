@@ -204,7 +204,7 @@ struct ChatView: View {
     }
     func isWriteOnPhotoRequest(_ t: String) -> Bool {
         let s = t.lowercased()
-        return s.contains("напиши сочинение") || s.contains("сочинение") || s.contains("напиши эссе") || s.contains("напиши на лист") || s.contains("напиши на фото") || s.contains("напиши на листке") || s.contains("напиши на бумаге") || s.contains("впиши текст") || s.contains("напиши текст на") || s.contains("напиши от руки")
+        return s.contains("сочинение") || s.contains("эссе") || s.contains("напиши на лист") || s.contains("напиши на фото") || s.contains("напиши на листке") || s.contains("напиши на бумаге") || s.contains("впиши текст") || s.contains("впиши ответ") || s.contains("впиши решение") || s.contains("напиши текст на") || s.contains("напиши от руки") || s.contains("напиши решение") || s.contains("реши на фото") || s.contains("реши и напиши") || s.contains("подчеркни на фото") || s.contains("подчеркни ответ") || s.contains("подчеркни решение") || ((s.contains("на фото") || s.contains("на лист")) && (s.contains("напиши") || s.contains("реши") || s.contains("подчеркни") || s.contains("впиши") || s.contains("дроб")))
     }
     func writeTextOntoPhoto(for message: ChatMessage) {
         guard let userMsg = session.messages.reversed().first(where: { $0.attachments.contains(where: { $0.kind == "image" }) }) else { errorText = "Сначала пришли фото."; return }
