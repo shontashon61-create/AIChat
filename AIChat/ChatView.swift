@@ -204,7 +204,7 @@ struct ChatView: View {
     }
     func isWriteOnPhotoRequest(_ t: String) -> Bool {
         let s = t.lowercased()
-        return s.contains("сочинение") || s.contains("эссе") || s.contains("напиши на лист") || s.contains("напиши на фото") || s.contains("напиши на листке") || s.contains("напиши на бумаге") || s.contains("впиши текст") || s.contains("впиши ответ") || s.contains("впиши решение") || s.contains("напиши текст на") || s.contains("напиши от руки") || s.contains("напиши решение") || s.contains("реши на фото") || s.contains("реши и напиши") || s.contains("подчеркни на фото") || s.contains("подчеркни ответ") || s.contains("подчеркни решение") || ((s.contains("на фото") || s.contains("на лист")) && (s.contains("напиши") || s.contains("реши") || s.contains("подчеркни") || s.contains("впиши") || s.contains("дроб")))
+        return s.contains("сочинение") || s.contains("эссе") || s.contains("напиши на лист") || s.contains("напиши на фото") || s.contains("напиши на листке") || s.contains("напиши на бумаге") || s.contains("впиши текст") || s.contains("впиши ответ") || s.contains("впиши решение") || s.contains("напиши текст на") || s.contains("напиши от руки") || s.contains("напиши решение") || s.contains("реши на фото") || s.contains("реши и напиши") || s.contains("подчеркни на фото") || s.contains("подчеркни ответ") || s.contains("подчеркни решение") || s.contains("подчеркни подлежащее") || s.contains("подчеркни сказуемое") || s.contains("разбери предложение") || s.contains("сделай разбор") || s.contains("реши задачу") || s.contains("напиши формулу") || s.contains("схема") || s.contains("по русскому") || s.contains("по физике") || s.contains("по математике") || ((s.contains("на фото") || s.contains("на лист")) && (s.contains("напиши") || s.contains("реши") || s.contains("подчеркни") || s.contains("впиши") || s.contains("дроб")))
     }
     func writeTextOntoPhoto(for message: ChatMessage) {
         guard let userMsg = session.messages.reversed().first(where: { $0.attachments.contains(where: { $0.kind == "image" }) }) else { errorText = "Сначала пришли фото."; return }
@@ -321,18 +321,12 @@ struct MessageRow: View {
                 if message.role == "assistant" && !message.content.isEmpty {
                     HStack(spacing: 14) {
                         Button { UIPasteboard.general.string = message.content; Haptic.success(); copied = true; DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { copied = false } } label: { HStack(spacing: 4) { Image(systemName: copied ? "checkmark" : "doc.on.doc"); if copied { Text("Скопировано") } } }
-                        ShareLink(item: message.content) { Image(systemName: "square.and.arrow.up") }
-                        Button { Speaker.shared.speak(message.content) } label: { Image(systemName: "speaker.wave.2") }
-                        Button { Speaker.shared.stop() } label: { Image(systemName: "speaker.slash") }
                         Button(action: onContinue) { Image(systemName: "text.append") }
-                        Button(action: onAnnotate) { Image(systemName: "pencil.and.outline") }
                         Button(action: onWriteOnto) { Image(systemName: "pencil.line") }
-                        Button(action: onVisualize) { Image(systemName: "photo.badge.plus") }
                         if message.attachments.contains(where: { $0.fileName.contains("generated") }) { Button(action: onRegenerateImage) { Image(systemName: "photo.on.rectangle.angled") } }
                         Button(action: onFavorite) { Image(systemName: message.isFavorite ? "star.fill" : "star") }
                         Button(action: onRegenerate) { Image(systemName: "arrow.clockwise") }
                         Text("\(message.content.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.count) слов · ~\(max(1, message.content.count / 4)) ток.").font(.caption2).foregroundStyle(.secondary)
-                        Button(action: onDelete) { Image(systemName: "trash") }
                         if let m = message.model { Text(m).font(.caption2).foregroundStyle(.secondary).lineLimit(1) }
                     }.font(.caption).foregroundStyle(.secondary)
                 }
