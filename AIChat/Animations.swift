@@ -10,7 +10,6 @@ enum AppAnim {
 enum Haptic {
     static func tap() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
     static func success() { UINotificationFeedbackGenerator().notificationOccurred(.success) }
-    static func error() { UINotificationFeedbackGenerator().notificationOccurred(.error) }
 }
 
 struct TypingDots: View {
@@ -21,9 +20,7 @@ struct TypingDots: View {
                 Circle().frame(width: 7, height: 7).opacity(phase == i ? 1 : 0.35).scaleEffect(phase == i ? 1.25 : 1)
             }
         }
-        .onAppear {
-            Timer.scheduledTimer(withTimeInterval: 0.35, repeats: true) { _ in withAnimation(.easeInOut(duration: 0.3)) { phase = (phase + 1) % 3 } }
-        }
+        .onReceive(Timer.publish(every: 0.35, on: .main, in: .common).autoconnect()) { _ in withAnimation(.easeInOut(duration: 0.3)) { phase = (phase + 1) % 3 } }
     }
 }
 

@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var exportURL: URL?
     @State private var showShare = false
     @State private var voiceRefresh = UUID()
+    @State private var showDeleteAllConfirm = false
     let presets: [(String, String)] = [("Помощник", "Ты — полезный ИИ-ассистент. Отвечай на русском, кратко и по делу."), ("Программист", "Ты — опытный программист. Пиши чистый код, объясняй коротко, указывай файлы и строки."), ("Переводчик", "Ты — переводчик. Переводи точно, сохраняй стиль и смысл оригинала."), ("Учитель", "Ты — терпеливый учитель. Объясняй простыми словами, шаг за шагом, с примерами.")]
     var body: some View {
         NavigationStack {
@@ -48,7 +49,6 @@ struct SettingsView: View {
                         Text("Тема").font(.subheadline)
                         ScrollView(.horizontal, showsIndicators: false) { HStack { ForEach(AppThemes.all) { t in Button(t.name) { settings.appTheme = t.id }.padding(.horizontal, 12).padding(.vertical, 8).background(settings.appTheme == t.id ? DesignTheme.primary : DesignTheme.chip, in: Capsule()).foregroundStyle(settings.appTheme == t.id ? DesignTheme.onPrimary : DesignTheme.text).font(.caption) } } }
                         HStack { Text("Размер шрифта"); Slider(value: $settings.fontSize, in: 14...20, step: 1); Text("\(Int(settings.fontSize))") }
-                        Toggle("Озвучка ответов", isOn: $settings.voiceEnabled)
                         Toggle("Озвучивать автоматически", isOn: $settings.autoSpeak)
                         Picker("Голос", selection: $settings.voiceID) { Text("По умолчанию").tag(""); ForEach(VoiceCatalog.sortedVoices(), id: \.identifier) { v in Text("\(v.name) (\(v.language))").tag(v.identifier) } }.id(voiceRefresh)
                         Text("Голоса нельзя скачать файлом в приложение — они системные. Приятные уже есть в iOS: Милена, Юрий — русский; Samantha, Ava, Daniel — английский. Новые: Настройки iPhone → Универсальный доступ → Устный контент → Голоса.").font(.caption).foregroundStyle(.secondary)
@@ -60,7 +60,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Данные").font(.headline)
                         Button("Экспорт всех чатов (файл)") { exportURL = store.exportURL(); showShare = exportURL != nil }
-                        Button(role: .destructive) { store.sessions.removeAll(); store.currentId = nil; store.save(); _ = store.newChat() } label: { Text("Удалить все чаты") }
+                        Button(role: .destructive) { showDeleteAllConfirm = true } label: { Text("Удалить все чаты") }
                     }.cardStyle()
                     Text("Поддерживается любой OpenAI-совместимый API: /models и /chat/completions со стримингом, reasoning_content, vision-картинками. Видео отправляется как текстовая пометка — модель его не видит как кадры.").font(.caption).foregroundStyle(.secondary).padding(.horizontal, 4)
                 }.padding()
@@ -69,6 +69,7 @@ struct SettingsView: View {
             .navigationTitle("Настройки")
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Готово") { dismiss() } } }
             .sheet(isPresented: $showShare) { if let u = exportURL { ShareSheet(url: u) } }
+            .alert("Удалить все чаты?", isPresented: $showDeleteAllConfirm) { Button("Удалить всё", role: .destructive) { store.sessions.removeAll(); store.currentId = nil; store.save(); _ = store.newChat() }; Button("Отмена", role: .cancel) {} } message: { Text("Это действие нельзя отменить.") }
         }
     }
 }

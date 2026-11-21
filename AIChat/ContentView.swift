@@ -60,9 +60,10 @@ struct HistoryView: View {
     @EnvironmentObject var store: ChatStore
     @Environment(\.dismiss) var dismiss
     @State private var searchText = ""
+    @State private var showFavoritesOnly = false
     @State private var renameSession: ChatSession?
     @State private var renameText = ""
-    var filtered: [ChatSession] { let list = store.sessions.sorted { ($0.isPinned ? 0 : 1, $0.createdAt) > ($1.isPinned ? 0 : 1, $1.createdAt) }; if searchText.isEmpty { return list }; return list.filter { $0.title.localizedCaseInsensitiveContains(searchText) || $0.messages.contains { $0.content.localizedCaseInsensitiveContains(searchText) } } }
+    var filtered: [ChatSession] { var list = store.sessions.sorted { if $0.isPinned != $1.isPinned { return $0.isPinned }; return $0.createdAt > $1.createdAt }; if showFavoritesOnly { list = list.filter { $0.messages.contains { $0.isFavorite } } }; if searchText.isEmpty { return list }; return list.filter { $0.title.localizedCaseInsensitiveContains(searchText) || $0.messages.contains { $0.content.localizedCaseInsensitiveContains(searchText) } } }
     var body: some View {
         NavigationStack {
             List {
@@ -74,7 +75,7 @@ struct HistoryView: View {
             }
             .searchable(text: $searchText, prompt: "Поиск по чатам")
             .navigationTitle("История чатов")
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Новый") { _ = store.newChat(); dismiss() } } }
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { HStack { Button { showFavoritesOnly.toggle() } label: { Image(systemName: showFavoritesOnly ? "star.fill" : "star") }; Button("Новый") { _ = store.newChat(); dismiss() } } } }
             .alert("Переименовать чат", isPresented: Binding(get: { renameSession != nil }, set: { if !$0 { renameSession = nil } })) { TextField("Название", text: $renameText); Button("Сохранить") { if let s = renameSession { store.rename(s.id, renameText) }; renameSession = nil }; Button("Отмена", role: .cancel) { renameSession = nil } }
         }
     }

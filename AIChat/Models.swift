@@ -45,7 +45,6 @@ class SettingsStore: ObservableObject {
     @AppStorage("temperature") var temperature: Double = 0.7
     @AppStorage("reasoningEffort") var reasoningEffort: String = "medium"
     @AppStorage("showThinking") var showThinking: Bool = true
-    @AppStorage("voiceEnabled") var voiceEnabled: Bool = true
     @AppStorage("autoSpeak") var autoSpeak: Bool = false
     @AppStorage("voiceID") var voiceID: String = ""
     @AppStorage("voiceRate") var voiceRate: Double = 0.48
@@ -53,7 +52,6 @@ class SettingsStore: ObservableObject {
     @AppStorage("imageModel") var imageModel: String = "gpt-image-1"
     @AppStorage("imageSize") var imageSize: String = "1024x1024"
     @AppStorage("imageStyle") var imageStyle: String = "auto"
-    @AppStorage("isDark") var isDark: Bool = true
     @AppStorage("appTheme") var appTheme: String = "paper"
     @AppStorage("fontSize") var fontSize: Double = 16
     @AppStorage("hasSeenOnboarding") var hasSeenOnboarding: Bool = false
@@ -99,7 +97,7 @@ class ChatStore: ObservableObject {
     func togglePin(_ id: UUID) {
         guard let i = sessions.firstIndex(where: { $0.id == id }) else { return }
         sessions[i].isPinned.toggle()
-        sessions.sort { ($0.isPinned ? 0 : 1, $0.createdAt) > ($1.isPinned ? 0 : 1, $1.createdAt) }
+        sessions.sort { if $0.isPinned != $1.isPinned { return $0.isPinned }; return $0.createdAt > $1.createdAt }
         save()
     }
     func rename(_ id: UUID, _ title: String) {
@@ -123,7 +121,11 @@ class ChatStore: ObservableObject {
     }
     func exportMarkdownURL(for session: ChatSession) -> URL? {
         var md = "# " + session.title + "\n\n"
-        for m in session.messages { md += (m.role == "user" ? "## Вы\n\n" : "## ИИ\n\n") + m.content + "\n\n" }
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "ru_RU")
+        df.dateStyle = .medium
+        df.timeStyle = .short
+        for m in session.messages { md += (m.role == "user" ? "## Вы\n\n" : "## ИИ\n\n") + "*" + df.string(from: m.createdAt) + "*\n\n" + m.content + "\n\n" }
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("aichat-chat-\(Int(Date().timeIntervalSince1970)).md")
         try? md.data(using: .utf8)?.write(to: url)
         return url

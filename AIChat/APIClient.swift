@@ -11,7 +11,6 @@ struct ModelsResponse: Decodable {
     }
 }
 struct ModelItem: Decodable { let id: String }
-struct APIErrorBody: Decodable { struct Detail: Decodable { let message: String? }; let error: Detail?; let message: String? }
 struct StreamDelta: Decodable {
     struct Choice: Decodable {
         struct Delta: Decodable { let content: String?; let reasoning_content: String?; let reasoning: String? }
@@ -41,7 +40,7 @@ class APIClient {
                 settings.availableModels = models
                 settings.connectionOK = true
                 if models.isEmpty { settings.modelsError = "Сервер вернул пустой список моделей" }
-                if settings.selectedModel.isEmpty { settings.selectedModel = models.first?.id ?? "" }
+                if settings.selectedModel.isEmpty || !models.contains(where: { $0.id == settings.selectedModel }) { settings.selectedModel = models.first?.id ?? "" }
                 settings.isLoadingModels = false
             }
         } catch {
@@ -53,7 +52,7 @@ class APIClient {
         let trimmed = Array(messages.suffix(max(1, settings.contextLimit)))
         var apiMessages: [[String: Any]] = []
         if !settings.systemPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { apiMessages.append(["role": "system", "content": settings.systemPrompt]) }
-        apiMessages.append(["role": "system", "content": "Ты умеешь генерировать фото прямо в этом диалоге, как ассистент с генерацией картинок. Когда пользователь просит нарисовать, сгенерировать, показать картинку, визуализировать твой ответ, сделать схему или иллюстрацию — или когда картинка явно улучшит ответ — добавь в конце ответа отдельную строку [IMAGE: detailed visual prompt in English, style, composition, colors, no text unless requested]. Можно до 3 таких строк для разных картинок. Не объясняй про маркер и не пиши, что не умеешь генерировать фото. Если в чате есть фото и просят вставить ответы, отредактировать или написать на нём — отвечай пронумерованным списком, каждый ответ с новой строки, фразеологизм — объяснение через тире."])
+        apiMessages.append(["role": "system", "content": "Ты умеешь генерировать фото прямо в этом диалоге, как ассистент с генерацией картинок. Когда пользователь просит нарисовать, сгенерировать, показать картинку, визуализировать твой ответ, сделать схему или иллюстрацию — или когда картинка явно улучшит ответ — добавь в конце ответа отдельную строку [IMAGE: detailed visual prompt in English, style, composition, colors, no text unless requested]. Можно до 3 таких строк для разных картинок. Не объясняй про маркер и не пиши, что не умеешь генерировать фото. Если в чате есть фото и просят вставить ответы, отредактировать или написать на нём — отвечай пронумерованным списком, каждый ответ с новой строки, фразеологизм — объяснение через тире. Если просят написать сочинение, эссе или любой текст на фото или листке — верни только сам текст, абзацами, без заголовков, markdown, нумерации и пояснений, как будто пишешь от руки синей ручкой."])
         for m in trimmed {
             if m.role == "user" && !m.attachments.isEmpty {
                 var parts: [[String: Any]] = []

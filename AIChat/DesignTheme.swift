@@ -23,7 +23,7 @@ struct PrimaryButtonStyle: ButtonStyle {
 
 struct CardStyle: ViewModifier {
     func body(content: Content) -> some View {
-        content.padding(20).background(DesignTheme.surface).overlay(RoundedRectangle(cornerRadius: 16).stroke(DesignTheme.border)).clipShape(RoundedRectangle(cornerRadius: 16))
+        content.padding(20).background(DesignTheme.surface).overlay(RoundedRectangle(cornerRadius: 16).stroke(DesignTheme.border)).clipShape(RoundedRectangle(cornerRadius: 16)).shadow(color: .black.opacity(0.06), radius: 8, y: 2)
     }
 }
 
