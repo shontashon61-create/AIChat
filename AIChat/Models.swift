@@ -20,6 +20,7 @@ struct ChatMessage: Identifiable, Codable, Equatable {
     var model: String?
     var createdAt = Date()
     var isError: Bool = false
+    var isFavorite: Bool = false
 }
 
 struct ChatSession: Identifiable, Codable, Equatable {
@@ -118,6 +119,13 @@ class ChatStore: ObservableObject {
         guard let data = try? JSONEncoder().encode(sessions) else { return nil }
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("aichat-export-\(Int(Date().timeIntervalSince1970)).json")
         try? data.write(to: url)
+        return url
+    }
+    func exportMarkdownURL(for session: ChatSession) -> URL? {
+        var md = "# " + session.title + "\n\n"
+        for m in session.messages { md += (m.role == "user" ? "## Вы\n\n" : "## ИИ\n\n") + m.content + "\n\n" }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("aichat-chat-\(Int(Date().timeIntervalSince1970)).md")
+        try? md.data(using: .utf8)?.write(to: url)
         return url
     }
 }

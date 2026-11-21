@@ -14,6 +14,8 @@ struct ChatView: View {
     @State private var showAttachMenu = false
     @State private var showSearch = false
     @State private var searchText = ""
+    @State private var exportChatURL: URL?
+    @State private var showExportShare = false
     @State private var previewAttachment: Attachment?
     @State private var showModelSheet = false
     @State private var isGeneratingImage = false
@@ -29,13 +31,17 @@ struct ChatView: View {
                 ScrollView {
                     LazyVStack(spacing: 14) {
                         if session.messages.isEmpty { emptyView }
-                        ForEach(visibleMessages) { msg in
-                            MessageRow(message: msg, onRegenerate: regenerate, onDelete: { deleteMessage(msg) }, onEdit: { editMessage(msg) }, onPreview: { previewAttachment = $0 }, onAnnotate: { annotateAnswers(for: msg) }, onVisualize: { visualizeAnswer(msg) }, onContinue: { continueAnswer() }, onRegenerateImage: { regenerateImage(for: msg) }).messageAppear()
+                        ForEach(Array(visibleMessages.enumerated()), id: \.element.id) { idx, msg in
+                            VStack(spacing: 8) {
+                                if idx == 0 || !Calendar.current.isDate(visibleMessages[idx - 1].createdAt, inSameDayAs: msg.createdAt) { Text(msg.createdAt, style: .date).font(.caption2).foregroundStyle(.secondary).padding(.horizontal, 10).padding(.vertical, 4).background(DesignTheme.chip, in: Capsule()) }
+                                MessageRow(message: msg, onRegenerate: regenerate, onDelete: { deleteMessage(msg) }, onEdit: { editMessage(msg) }, onPreview: { previewAttachment = $0 }, onAnnotate: { annotateAnswers(for: msg) }, onVisualize: { visualizeAnswer(msg) }, onContinue: { continueAnswer() }, onRegenerateImage: { regenerateImage(for: msg) }, onFavorite: { toggleFavorite(msg) }).messageAppear()
+                            }
                         }
                         if isSending { HStack { TypingDots(); Text("ИИ печатает...").font(.caption).foregroundStyle(.secondary); Spacer(); Button("Стоп") { stopGeneration() }.font(.caption.bold()).foregroundStyle(.red) }.padding(.leading, 4) }
                     }.padding(.horizontal).padding(.vertical, 12)
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .overlay(alignment: .bottomTrailing) { Button { scrollToLast(proxy) } label: { Image(systemName: "arrow.down.circle.fill").font(.title2).foregroundStyle(DesignTheme.primary).background(Circle().fill(DesignTheme.surface)) }.padding(.trailing, 12).padding(.bottom, 8) }
                 .onChange(of: session.messages.count) { _ in scrollToLast(proxy) }
                 .onChange(of: session.messages.last?.content ?? "") { _ in scrollToLast(proxy) }
             }
@@ -43,12 +49,13 @@ struct ChatView: View {
             attachmentPreview
             inputBar
         }
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showSearch.toggle(); if !showSearch { searchText = "" } } label: { Image(systemName: "magnifyingglass") } } }
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { HStack(spacing: 14) { Button { exportChatURL = store.exportMarkdownURL(for: session); showExportShare = exportChatURL != nil } label: { Image(systemName: "square.and.arrow.up") }; Button { showSearch.toggle(); if !showSearch { searchText = "" } } label: { Image(systemName: "magnifyingglass") } } } }
         .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Готово") { inputFocused = false } } }
         .sheet(isPresented: $showModelSheet) { ModelPickerSheet() }
         .sheet(isPresented: $showPicker) { PhotoVideoPicker(onPick: addAttachment) }
         .sheet(isPresented: $showCamera) { CameraPicker(onPick: addAttachment) }
         .sheet(item: $previewAttachment) { a in AttachmentPreviewView(attachment: a) }
+        .sheet(isPresented: $showExportShare) { if let u = exportChatURL { ShareSheet(url: u) } }
         .confirmationDialog("Добавить", isPresented: $showAttachMenu) { Button("Фото или видео из галереи") { showPicker = true }; Button("Снять фото или видео") { showCamera = true }; Button("Сгенерировать фото") { Task { await generateImage() } }; Button("Отмена", role: .cancel) {} }
         .alert("Ошибка", isPresented: Binding(get: { errorText != nil }, set: { if !$0 { errorText = nil } })) { Button("OK") {} } message: { Text(errorText ?? "") }
         .onChange(of: store.currentId) { _ in if let s = store.sessions.first(where: { $0.id == store.currentId }) { session = s } }
@@ -218,6 +225,7 @@ struct ChatView: View {
         guard !prompt.isEmpty else { return }
         Task { await generateImage(promptOverride: prompt) }
     }
+    func toggleFavorite(_ msg: ChatMessage) { guard let idx = session.messages.firstIndex(where: { $0.id == msg.id }) else { return }; session.messages[idx].isFavorite.toggle(); Haptic.tap(); store.update(session) }
     func stopGeneration() { streamTask?.cancel(); streamTask = nil; isSending = false; store.update(session); BackgroundSupport.shared.end() }
     func regenerate() {
         guard !isSending else { return }
@@ -272,6 +280,7 @@ struct MessageRow: View {
     let onVisualize: () -> Void
     let onContinue: () -> Void
     let onRegenerateImage: () -> Void
+    let onFavorite: () -> Void
     var body: some View {
         VStack(alignment: message.role == "user" ? .trailing : .leading, spacing: 6) {
             if let thinking = message.thinking, !thinking.isEmpty, settings.showThinking, message.role == "assistant" {
@@ -294,7 +303,9 @@ struct MessageRow: View {
                         Button(action: onAnnotate) { Image(systemName: "pencil.and.outline") }
                         Button(action: onVisualize) { Image(systemName: "photo.badge.plus") }
                         if message.attachments.contains(where: { $0.fileName.contains("generated") }) { Button(action: onRegenerateImage) { Image(systemName: "photo.on.rectangle.angled") } }
+                        Button(action: onFavorite) { Image(systemName: message.isFavorite ? "star.fill" : "star") }
                         Button(action: onRegenerate) { Image(systemName: "arrow.clockwise") }
+                        Text("\(message.content.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.count) слов · ~\(max(1, message.content.count / 4)) ток.").font(.caption2).foregroundStyle(.secondary)
                         Button(action: onDelete) { Image(systemName: "trash") }
                         if let m = message.model { Text(m).font(.caption2).foregroundStyle(.secondary).lineLimit(1) }
                     }.font(.caption).foregroundStyle(.secondary)
