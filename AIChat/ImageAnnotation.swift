@@ -93,6 +93,7 @@ enum ImageAnnotator {
             out.append(line)
         }
         var cleaned = out.joined(separator: "\n")
+        cleaned = cleaned.replacingOccurrences(of: "; ", with: ";\n")
         while cleaned.contains("\n\n\n") { cleaned = cleaned.replacingOccurrences(of: "\n\n\n", with: "\n\n") }
         return convertFormulas(cleaned.trimmingCharacters(in: .whitespacesAndNewlines))
     }
@@ -138,17 +139,18 @@ enum ImageAnnotator {
         let w = image.size.width
         let h = image.size.height
         let scale = max(0.8, w / 1000.0)
-        let fontSize: CGFloat = 44 * scale
-        let font = handwritingFont(ofSize: fontSize, text: clean)
+        var fontSize: CGFloat = 30 * scale
+        var font = handwritingFont(ofSize: fontSize, text: clean)
         let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: penBlue]
-        let marginX = w * 0.08
-        let marginTop = h * 0.06
-        let marginBottom = h * 0.05
+        let marginX = w * 0.07
+        let marginTop = h * 0.08
+        let marginBottom = h * 0.06
         let usableW = w - marginX * 2
         let usableH = h - marginTop - marginBottom
-        let lines = wrappedStyledLines(clean, font: font, width: usableW)
-        let lineHeight = font.lineHeight * 1.6
-        let perPage = max(1, Int(usableH / lineHeight))
+        var lines = wrappedStyledLines(clean, font: font, width: usableW)
+        var lineHeight = font.lineHeight * 1.45
+        var perPage = max(1, Int(usableH / lineHeight))
+        while lines.count > perPage && fontSize > 20 * scale { fontSize -= 4 * scale; font = handwritingFont(ofSize: fontSize, text: clean); lines = wrappedStyledLines(clean, font: font, width: usableW); lineHeight = font.lineHeight * 1.45; perPage = max(1, Int(usableH / lineHeight)) }
         var pages: [UIImage] = []
         var start = 0
         while start < lines.count {

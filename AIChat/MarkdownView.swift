@@ -31,10 +31,17 @@ struct MarkdownView: View {
     }
     func attributed(_ raw: String) -> AttributedString {
         var t = convertFractions(raw)
+        t = t.replacingOccurrences(of: "; ", with: ";\n")
         let u1 = extractUnderline(t, open: "++", close: "++"); t = u1.0
         let u2 = extractUnderline(t, open: "<u>", close: "</u>"); t = u2.0
+        let u3 = extractUnderline(t, open: "==", close: "=="); t = u3.0
+        let u4 = extractUnderline(t, open: "~~", close: "~~"); t = u4.0
+        let u5 = extractUnderline(t, open: "^^", close: "^^"); t = u5.0
+        t = t.components(separatedBy: "\n").map { $0.hasSuffix(" ") ? $0 : $0 + " " }.joined(separator: "\n")
         var attr = (try? AttributedString(markdown: t, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .full))) ?? AttributedString(t)
-        for phrase in u1.1 + u2.1 { if let r = attr.range(of: phrase) { attr[r].underlineStyle = .single } }
+        for phrase in u1.1 + u2.1 + u5.1 { if let r = attr.range(of: phrase) { attr[r].underlineStyle = .single } }
+        for phrase in u3.1 { if let r = attr.range(of: phrase) { attr[r].underlineStyle = .double } }
+        for phrase in u4.1 { if let r = attr.range(of: phrase) { attr[r].underlineStyle = NSUnderlineStyle.patternDot.union(.single) } }
         return attr
     }
     func extractUnderline(_ input: String, open: String, close: String) -> (String, [String]) {
