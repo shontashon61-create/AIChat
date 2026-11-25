@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct MarkdownSegment: Identifiable { let id = UUID(); let isCode: Bool; let isTable: Bool; let isDiagram: Bool; let isScheme: Bool; let isDraw: Bool; let isFree: Bool; let language: String; let text: String }
 
@@ -40,8 +41,8 @@ struct AnnotatedTextView: View {
         var attr = AttributedString(run.text)
         var isBold = run.bold
         switch run.mark {
-        case "u": attr.underlineStyle = Text.LineStyle(pattern: .solid); attr.underlineColor = .primary
-        case "ud": attr.underlineStyle = Text.LineStyle(pattern: .solid); attr.underlineColor = .primary; isBold = true
+        case "u": attr.underlineStyle = Text.LineStyle(pattern: .solid); attr.underlineColor = UIColor.label
+        case "ud": attr.underlineStyle = Text.LineStyle(pattern: .solid); attr.underlineColor = UIColor.label; isBold = true
         case "dot": attr.underlineStyle = Text.LineStyle(pattern: .dot); attr.underlineColor = .red
         case "wave": attr.underlineStyle = Text.LineStyle(pattern: .dashDotDot); attr.underlineColor = .red
         case "dash": attr.underlineStyle = Text.LineStyle(pattern: .dashDot); attr.underlineColor = .blue
