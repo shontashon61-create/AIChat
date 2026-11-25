@@ -37,22 +37,24 @@ struct AnnotatedTextView: View {
         return out
     }
     func styled(_ run: AnnotatedRun) -> Text {
-        var t = Text(run.text)
-        if run.bold { t = t.bold() }
-        if run.italic { t = t.italic() }
+        var attr = AttributedString(run.text)
+        var isBold = run.bold
         switch run.mark {
-        case "u": t = t.underline(true, pattern: .solid, color: .primary)
-        case "ud": t = t.underline(true, pattern: .solid, color: .primary).bold()
-        case "dot": t = t.underline(true, pattern: .dot, color: .red)
-        case "wave": t = t.underline(true, pattern: .dashDotDot, color: .red)
-        case "dash": t = t.underline(true, pattern: .dashDot, color: .blue)
-        case "hl": t = t.background(Color.yellow.opacity(0.55))
-        case "circ": t = t.background(Color.red.opacity(0.18)).bold()
-        case "box": t = t.background(Color.orange.opacity(0.3)).bold()
-        case "strike": t = t.strikethrough(true, color: .red)
+        case "u": attr.underlineStyle = Text.LineStyle(pattern: .solid); attr.underlineColor = .primary
+        case "ud": attr.underlineStyle = Text.LineStyle(pattern: .solid); attr.underlineColor = .primary; isBold = true
+        case "dot": attr.underlineStyle = Text.LineStyle(pattern: .dot); attr.underlineColor = .red
+        case "wave": attr.underlineStyle = Text.LineStyle(pattern: .dashDotDot); attr.underlineColor = .red
+        case "dash": attr.underlineStyle = Text.LineStyle(pattern: .dashDot); attr.underlineColor = .blue
+        case "hl": attr.backgroundColor = Color.yellow.opacity(0.55)
+        case "circ": attr.backgroundColor = Color.red.opacity(0.18); isBold = true
+        case "box": attr.backgroundColor = Color.orange.opacity(0.3); isBold = true
+        case "strike": attr.strikethroughStyle = Text.LineStyle(pattern: .solid); attr.strikethroughColor = .red
         default: break
         }
-        return t
+        if isBold && run.italic { attr.font = .body.bold().italic() }
+        else if isBold { attr.font = .body.bold() }
+        else if run.italic { attr.font = .body.italic() }
+        return Text(attr)
     }
     var body: some View {
         parseRuns(text).reduce(Text(""), { acc, run in acc + styled(run) })
