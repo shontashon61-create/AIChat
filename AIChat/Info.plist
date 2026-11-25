@@ -13,10 +13,7 @@
 <key>LSRequiresIPhoneOS</key><true/>
 <key>MinimumOSVersion</key><string>16.0</string>
 <key>UILaunchStoryboardName</key><string>LaunchScreen</string>
-<key>UIBackgroundModes</key><array><string>fetch</string></array>
-<key>NSCameraUsageDescription</key><string>Нужно для съёмки фото и видео прямо в чате</string>
-<key>NSMicrophoneUsageDescription</key><string>Нужно для голосового ввода</string>
-<key>NSSpeechRecognitionUsageDescription</key><string>Нужно для распознавания речи в текст</string>
-<key>NSPhotoLibraryUsageDescription</key><string>Нужно для выбора фото и видео для ИИ</string>
+<key>NSPhotoLibraryUsageDescription</key><string>Нужно для выбора фото для ИИ</string>
+<key>NSCameraUsageDescription</key><string>Нужно для съёмки фото задания для ИИ</string>
 </dict>
 </plist>

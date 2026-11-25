@@ -20,7 +20,6 @@ struct ChatMessage: Identifiable, Codable, Equatable {
     var model: String?
     var createdAt = Date()
     var isError: Bool = false
-    var isFavorite: Bool = false
 }
 
 struct ChatSession: Identifiable, Codable, Equatable {
@@ -43,21 +42,22 @@ class SettingsStore: ObservableObject {
     @AppStorage("systemPrompt") var systemPrompt: String = "Ты — полезный ИИ-ассистент. Отвечай на русском, кратко и по делу."
     @AppStorage("selectedModel") var selectedModel: String = ""
     @AppStorage("temperature") var temperature: Double = 0.7
-    @AppStorage("reasoningEffort") var reasoningEffort: String = "medium"
-    @AppStorage("showThinking") var showThinking: Bool = true
-    @AppStorage("autoSpeak") var autoSpeak: Bool = false
-    @AppStorage("voiceID") var voiceID: String = ""
-    @AppStorage("voiceRate") var voiceRate: Double = 0.48
-    @AppStorage("voicePitch") var voicePitch: Double = 1.0
-    @AppStorage("imageModel") var imageModel: String = "gpt-image-1"
-    @AppStorage("imageSize") var imageSize: String = "1024x1024"
-    @AppStorage("imageStyle") var imageStyle: String = "auto"
-    @AppStorage("appTheme") var appTheme: String = "paper"
-    @AppStorage("fontSize") var fontSize: Double = 16
-    @AppStorage("hasSeenOnboarding") var hasSeenOnboarding: Bool = false
-    @AppStorage("userName") var userName: String = ""
-    @AppStorage("maxTokens") var maxTokens: Int = 2048
-    @AppStorage("contextLimit") var contextLimit: Int = 20
+    @AppStorage("schoolMode") var schoolMode: Bool = true
+    @AppStorage("schoolSubject") var schoolSubject: String = "Универсально"
+    @AppStorage("schoolFormat") var schoolFormat: String = "Кратко и по делу"
+    @AppStorage("mellstroyMode") var mellstroyMode: Bool = true
+    @AppStorage("examMode") var examMode: Bool = false
+    @AppStorage("verifyAnswers") var verifyAnswers: Bool = false
+    @AppStorage("checkerModel") var checkerModel: String = ""
+    @AppStorage("textbooks") var textbooks: String = ""
+    @AppStorage("meshMinutes") var meshMinutes: Double = 10
+    @AppStorage("voiceMode") var voiceMode: Bool = false
+    @AppStorage("humanCDZ") var humanCDZ: Bool = true
+    @AppStorage("offlineMode") var offlineMode: Bool = true
+    @AppStorage("myStyle") var myStyle: String = ""
+    @AppStorage("noWaterMode") var noWaterMode: Bool = false
+    @AppStorage("notebookLargeFont") var notebookLargeFont: Bool = true
+    @AppStorage("onlyUnsolvedCDZ") var onlyUnsolvedCDZ: Bool = true
     @Published var availableModels: [AIModel] = []
     @Published var modelsError: String?
     @Published var isLoadingModels = false
@@ -102,32 +102,32 @@ class ChatStore: ObservableObject {
     }
     func rename(_ id: UUID, _ title: String) {
         guard let i = sessions.firstIndex(where: { $0.id == id }) else { return }
-        sessions[i].title = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? sessions[i].title : title
+        let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !t.isEmpty { sessions[i].title = t }
         save()
     }
+    func deleteAll() {
+        sessions = []
+        currentId = nil
+        save()
+        _ = newChat()
+    }
+    private var saveWork: DispatchWorkItem?
     func save() {
+        saveWork?.cancel()
+        let snapshot = sessions
+        let url = fileURL
+        let work = DispatchWorkItem { do { try JSONEncoder().encode(snapshot).write(to: url, options: .atomic) } catch { print("save error", error) } }
+        saveWork = work
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 0.4, execute: work)
+    }
+    func saveNow() {
+        saveWork?.cancel()
         do { try JSONEncoder().encode(sessions).write(to: fileURL, options: .atomic) } catch { print("save error", error) }
     }
     func load() {
         guard let d = try? Data(contentsOf: fileURL) else { return }
         if let v = try? JSONDecoder().decode([ChatSession].self, from: d) { sessions = v; currentId = v.first?.id; return }
         try? FileManager.default.moveItem(at: fileURL, to: fileURL.deletingLastPathComponent().appendingPathComponent("chats.corrupted.json"))
-    }
-    func exportURL() -> URL? {
-        guard let data = try? JSONEncoder().encode(sessions) else { return nil }
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("aichat-export-\(Int(Date().timeIntervalSince1970)).json")
-        try? data.write(to: url)
-        return url
-    }
-    func exportMarkdownURL(for session: ChatSession) -> URL? {
-        var md = "# " + session.title + "\n\n"
-        let df = DateFormatter()
-        df.locale = Locale(identifier: "ru_RU")
-        df.dateStyle = .medium
-        df.timeStyle = .short
-        for m in session.messages { md += (m.role == "user" ? "## Вы\n\n" : "## ИИ\n\n") + "*" + df.string(from: m.createdAt) + "*\n\n" + m.content + "\n\n" }
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("aichat-chat-\(Int(Date().timeIntervalSince1970)).md")
-        try? md.data(using: .utf8)?.write(to: url)
-        return url
     }
 }

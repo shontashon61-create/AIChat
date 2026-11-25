@@ -6,76 +6,45 @@ struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
     @State private var showKey = false
     @State private var testResult: String?
-    @State private var exportURL: URL?
-    @State private var showShare = false
-    @State private var voiceRefresh = UUID()
     @State private var showDeleteAllConfirm = false
-    let presets: [(String, String)] = [("Помощник", "Ты — полезный ИИ-ассистент. Отвечай на русском, кратко и по делу."), ("Программист", "Ты — опытный программист. Пиши чистый код, объясняй коротко, указывай файлы и строки."), ("Переводчик", "Ты — переводчик. Переводи точно, сохраняй стиль и смысл оригинала."), ("Учитель", "Ты — терпеливый учитель. Объясняй простыми словами, шаг за шагом, с примерами.")]
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 12) {
-                    Capsule().fill(DesignTheme.border).frame(width: 40, height: 4).padding(.top, 8)
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Подключение").font(.headline)
-                        TextField("API Base URL", text: $settings.baseURL).autocorrectionDisabled().textInputAutocapitalization(.never).keyboardType(.URL).padding(10).background(DesignTheme.chip, in: RoundedRectangle(cornerRadius: 10))
-                        HStack { if showKey { TextField("API Key", text: $settings.apiKey) } else { SecureField("API Key", text: $settings.apiKey) }; Button { showKey.toggle() } label: { Image(systemName: showKey ? "eye.slash" : "eye") } }.padding(10).background(DesignTheme.chip, in: RoundedRectangle(cornerRadius: 10))
-                        Button { Task { await APIClient.fetchModels(settings: settings); testResult = settings.connectionOK == true ? "Подключение OK, моделей: \(settings.availableModels.count)" : (settings.modelsError ?? "Ошибка") } } label: { HStack { if settings.isLoadingModels { ProgressView() }; Text("Проверить подключение и обновить модели") } }.buttonStyle(PrimaryButtonStyle())
-                        if let r = testResult { Text(r).font(.caption).foregroundStyle(settings.connectionOK == true ? .green : .red) }
-                        if let e = settings.modelsError { Text(e).foregroundStyle(.red).font(.caption) }
-                        Picker("Модель", selection: $settings.selectedModel) { Text("Не выбрана").tag(""); ForEach(settings.availableModels) { Text($0.id).tag($0.id) } }
-                    }.cardStyle()
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Системный промт").font(.headline)
-                        ScrollView(.horizontal, showsIndicators: false) { HStack { ForEach(presets, id: \.0) { p in Button(p.0) { settings.systemPrompt = p.1 }.padding(.horizontal, 12).padding(.vertical, 8).background(DesignTheme.chip, in: Capsule()).font(.caption) } } }
-                        TextEditor(text: $settings.systemPrompt).frame(minHeight: 120).padding(8).background(DesignTheme.chip, in: RoundedRectangle(cornerRadius: 10))
-                        Button("Сбросить промт") { settings.systemPrompt = presets[0].1 }.font(.caption)
-                    }.cardStyle()
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Генерация и размышление").font(.headline)
-                        Picker("Размышление", selection: $settings.reasoningEffort) { Text("Выкл").tag("off"); Text("Низкое").tag("low"); Text("Среднее").tag("medium"); Text("Высокое").tag("high") }
-                        Toggle("Показывать ход мыслей ИИ", isOn: $settings.showThinking)
-                        Stepper("Макс. токенов: \(settings.maxTokens)", value: $settings.maxTokens, in: 256...8192, step: 256)
-                        Stepper("Контекст: последние \(settings.contextLimit) сообщ.", value: $settings.contextLimit, in: 4...50, step: 2)
-                        HStack { Text("Температура"); Slider(value: $settings.temperature, in: 0...2, step: 0.1); Text(String(format: "%.1f", settings.temperature)) }
-                        Text("Генерация картинок").font(.subheadline)
-                        TextField("Модель картинок", text: $settings.imageModel).autocorrectionDisabled().textInputAutocapitalization(.never).padding(10).background(DesignTheme.chip, in: RoundedRectangle(cornerRadius: 10))
-                        Picker("Размер картинки", selection: $settings.imageSize) { Text("1024 × 1024").tag("1024x1024"); Text("1024 × 1792").tag("1024x1792"); Text("1792 × 1024").tag("1792x1024") }
-                        Picker("Стиль картинки", selection: $settings.imageStyle) { Text("Авто").tag("auto"); Text("Фотореализм").tag("photorealistic"); Text("Аниме").tag("anime"); Text("3D").tag("3d render"); Text("Акварель").tag("watercolor"); Text("Пиксель-арт").tag("pixel art") }
-                        Text("В чате нажми + и выбери «Сгенерировать фото» — текст из поля ввода уйдёт как описание. Видео зависит от провайдера: стандартного OpenAI-совместимого endpoint для видео нет, приложение честно покажет ошибку провайдера.").font(.caption).foregroundStyle(.secondary)
-                    }.cardStyle()
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Внешний вид и голос").font(.headline)
-                        Text("Тема").font(.subheadline)
-                        ScrollView(.horizontal, showsIndicators: false) { HStack { ForEach(AppThemes.all) { t in Button(t.name) { settings.appTheme = t.id }.padding(.horizontal, 12).padding(.vertical, 8).background(settings.appTheme == t.id ? DesignTheme.primary : DesignTheme.chip, in: Capsule()).foregroundStyle(settings.appTheme == t.id ? DesignTheme.onPrimary : DesignTheme.text).font(.caption) } } }
-                        HStack { Text("Размер шрифта"); Slider(value: $settings.fontSize, in: 14...20, step: 1); Text("\(Int(settings.fontSize))") }
-                        Toggle("Озвучивать автоматически", isOn: $settings.autoSpeak)
-                        Picker("Голос", selection: $settings.voiceID) { Text("По умолчанию").tag(""); ForEach(VoiceCatalog.sortedVoices(), id: \.identifier) { v in Text("\(v.name) (\(v.language))").tag(v.identifier) } }.id(voiceRefresh)
-                        Text("Голоса нельзя скачать файлом в приложение — они системные. Приятные уже есть в iOS: Милена, Юрий — русский; Samantha, Ava, Daniel — английский. Новые: Настройки iPhone → Универсальный доступ → Устный контент → Голоса.").font(.caption).foregroundStyle(.secondary)
-                        HStack { Button("Скачать ещё голоса") { VoiceCatalog.openVoiceSettings() }; Button("Обновить список") { voiceRefresh = UUID() } }.font(.caption)
-                        HStack { Text("Скорость речи"); Slider(value: $settings.voiceRate, in: 0.30...0.65, step: 0.01); Text(String(format: "%.2f", settings.voiceRate)) }
-                        HStack { Text("Высота голоса"); Slider(value: $settings.voicePitch, in: 0.5...2.0, step: 0.1); Text(String(format: "%.1f", settings.voicePitch)) }
-                        Button("Проверить голос") { Speaker.shared.speak("Привет! Это проверка голоса и скорости речи.") }.font(.caption)
-                    }.cardStyle()
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Данные").font(.headline)
-                        Button("Экспорт всех чатов (файл)") { exportURL = store.exportURL(); showShare = exportURL != nil }
-                        Button(role: .destructive) { showDeleteAllConfirm = true } label: { Text("Удалить все чаты") }
-                    }.cardStyle()
-                    Text("Поддерживается любой OpenAI-совместимый API: /models и /chat/completions со стримингом, reasoning_content, vision-картинками. Видео отправляется как текстовая пометка — модель его не видит как кадры.").font(.caption).foregroundStyle(.secondary).padding(.horizontal, 4)
-                }.padding()
+            Form {
+                Section("Подключение") {
+                    TextField("API Base URL", text: $settings.baseURL).autocorrectionDisabled().textInputAutocapitalization(.never).keyboardType(.URL)
+                    HStack { if showKey { TextField("API Key", text: $settings.apiKey) } else { SecureField("API Key", text: $settings.apiKey) }; Button { showKey.toggle() } label: { Image(systemName: showKey ? "eye.slash" : "eye") } }
+                    Button { Task { await APIClient.fetchModels(settings: settings); testResult = settings.connectionOK == true ? "Подключение OK, моделей: \(settings.availableModels.count)" : (settings.modelsError ?? "Ошибка") } } label: { HStack { if settings.isLoadingModels { ProgressView() }; Text("Проверить подключение и обновить модели") } }
+                    if let r = testResult { Text(r).font(.caption).foregroundStyle(settings.connectionOK == true ? .green : .red) }
+                    if let e = settings.modelsError { Text(e).foregroundStyle(.red).font(.caption) }
+                    Picker("Модель", selection: $settings.selectedModel) { Text("Не выбрана").tag(""); ForEach(settings.availableModels) { Text($0.id).tag($0.id) } }
+                }
+                Section("Школьный режим") {
+                    Toggle("Включён (6 класс)", isOn: $settings.schoolMode)
+                    Toggle("Режим «Вся контрольная»", isOn: $settings.examMode)
+                    Toggle("Проверка второй моделью", isOn: $settings.verifyAnswers)
+                    if settings.verifyAnswers { Picker("Проверяющая модель", selection: $settings.checkerModel) { Text("Авто (другая модель)").tag(""); ForEach(settings.availableModels.filter { $0.id != settings.selectedModel }) { Text($0.id).tag($0.id) } } }
+                    Picker("Предмет", selection: $settings.schoolSubject) { ForEach(SchoolSkills.subjects, id: \.self) { Text($0).tag($0) } }
+                    Picker("Формат", selection: $settings.schoolFormat) { ForEach(SchoolSkills.formats, id: \.self) { Text($0).tag($0) } }
+                    Text("Для формата теста температура автоматически не выше 0.2 — ответы точнее.").font(.caption).foregroundStyle(.secondary)
+                }
+                Section("Голос, офлайн, ЦДЗ как человек") {
+                    Toggle("Голосовые ответы", isOn: $settings.voiceMode)
+                    Toggle("ЦДЗ как человек (паузы 8-25 сек)", isOn: $settings.humanCDZ)
+                    Toggle("Офлайн: формулы, оценки и прошлые ответы без сети", isOn: $settings.offlineMode)
+                    Text("База ЦДЗ: решённое задание сохраняется локально и в следующий раз берётся за секунду, без запроса к ИИ.").font(.caption).foregroundStyle(.secondary)
+                }
+                Section("Меллстрой") {
+                    Toggle("Тема Меллстроя", isOn: $settings.mellstroyMode)
+                    Text("Оранжево-красный акцент, иконки-мемы и короткие приколы на пустом экране. На ответы и правила 90% не влияет.").font(.caption).foregroundStyle(.secondary)
+                }
+                Section("Системный промт") { TextEditor(text: $settings.systemPrompt).frame(minHeight: 120) }
+                Section("Генерация") { HStack { Text("Температура"); Slider(value: $settings.temperature, in: 0...2, step: 0.1); Text(String(format: "%.1f", settings.temperature)) } }
+                Section("Данные") { Button(role: .destructive) { showDeleteAllConfirm = true } label: { Text("Удалить все чаты") } }
+                Text("Один OpenAI-совместимый API: /models и /chat/completions со стримингом. Модели Claude, GPT, Qwen, Gemini и DeepSeek берутся из списка провайдера. При ошибке отправка повторяется до 15 раз.").font(.caption).foregroundStyle(.secondary)
             }
-            .background(DesignTheme.background)
             .navigationTitle("Настройки")
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Готово") { dismiss() } } }
-            .sheet(isPresented: $showShare) { if let u = exportURL { ShareSheet(url: u) } }
-            .alert("Удалить все чаты?", isPresented: $showDeleteAllConfirm) { Button("Удалить всё", role: .destructive) { store.sessions.removeAll(); store.currentId = nil; store.save(); _ = store.newChat() }; Button("Отмена", role: .cancel) {} } message: { Text("Это действие нельзя отменить.") }
+            .alert("Удалить все чаты?", isPresented: $showDeleteAllConfirm) { Button("Удалить всё", role: .destructive) { store.deleteAll() }; Button("Отмена", role: .cancel) {} } message: { Text("Это действие нельзя отменить.") }
         }
     }
-}
-
-struct ShareSheet: UIViewControllerRepresentable {
-    let url: URL
-    func makeUIViewController(context: Context) -> UIActivityViewController { UIActivityViewController(activityItems: [url], applicationActivities: nil) }
-    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }

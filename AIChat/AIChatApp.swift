@@ -7,20 +7,11 @@ struct AIChatApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ZStack {
-                DesignTheme.background.ignoresSafeArea()
-                Group {
-                    if !settings.hasSeenOnboarding {
-                        OnboardingView()
-                    } else {
-                        ContentView()
-                    }
-                }
+            ContentView()
                 .environmentObject(settings)
                 .environmentObject(store)
-                .preferredColorScheme(AppThemes.palette(for: settings.appTheme).isDark ? .dark : .light)
-                .onAppear { BackgroundSupport.requestNotificationPermission() }
-            }
+                .tint(settings.mellstroyMode ? Mellstroy.accent : Color.accentColor)
+                .accentColor(settings.mellstroyMode ? Mellstroy.accent : Color.accentColor)
         }
     }
 }
