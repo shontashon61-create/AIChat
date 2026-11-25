@@ -45,7 +45,7 @@ struct CDZWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let w = WKWebView()
         DispatchQueue.main.async { webView = w }
-        if let url = URL(string: urlString), var req = try? URLRequest(url: url, method: .get) {
+        if let url = URL(string: urlString) { var req = URLRequest(url: url); req.httpMethod = "GET"
             req.setValue("aupd_token=\(token)", forHTTPHeaderField: "Cookie")
             w.load(req)
         } else if let url = URL(string: urlString) { w.load(URLRequest(url: url)) }

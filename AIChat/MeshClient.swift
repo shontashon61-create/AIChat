@@ -69,7 +69,8 @@ class MeshStore: ObservableObject {
             let ls = ScheduleParser.lessons(from: events)
             await MainActor.run { homeworks = list; lessons = ls; isLoading = false; if list.isEmpty { error = "Заданий на неделю нет или МЭШ не отдал их по этому ID" } }
         } catch {
-            await MainActor.run { error = error.localizedDescription; isLoading = false }
+            let message = error.localizedDescription
+            await MainActor.run { self.error = message; self.isLoading = false }
         }
     }
     func parse(data: Data) -> [MeshHomework] {
