@@ -24,6 +24,7 @@ struct ChatView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ZStack(alignment: .bottomTrailing) {
+                if settings.mellstroyMode { MellWallpaperView(style: settings.mellWallpaper) }
                 VStack(spacing: 0) {
                     if settings.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         HStack {
@@ -39,7 +40,7 @@ struct ChatView: View {
                         LazyVStack(spacing: 14) {
                             if session.messages.isEmpty {
                                 VStack(spacing: 12) {
-                                    Image(systemName: settings.mellstroyMode ? (Mellstroy.icons["crown"] ?? "crown.fill") : "sparkles").font(.system(size: 40)).foregroundStyle(settings.mellstroyMode ? Mellstroy.accent : Color.primary)
+                                    Group { if settings.mellstroyMode { MellAvatarView(size: 72) } else { Image(systemName: "sparkles").font(.system(size: 40)) } }
                                     Text(settings.mellstroyMode ? emptyMeme.0 : "Чем помочь?").font(.title2.bold())
                                     Text(settings.mellstroyMode ? emptyMeme.1 : (settings.selectedModel.isEmpty ? "Выберите модель в меню сверху" : settings.selectedModel)).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
                                     if settings.mellstroyMode { Text(emptyJoke).font(.caption2).foregroundStyle(Mellstroy.accent2) }
@@ -244,6 +245,7 @@ struct AttachmentPreviewView: View {
 }
 
 struct MessageRow: View {
+    @EnvironmentObject var settings: SettingsStore
     @State private var showThinking = true
     @State private var copied = false
     let message: ChatMessage
@@ -254,6 +256,7 @@ struct MessageRow: View {
     let onSpeak: (String) -> Void
     var body: some View {
         VStack(alignment: message.role == "user" ? .trailing : .leading, spacing: 6) {
+            if message.role == "assistant" && settings.mellstroyMode { HStack(spacing: 6) { MellAvatarView(size: 28); Text("Мелл").font(.caption.bold()).foregroundStyle(Mellstroy.accent2) } }
             if let thinking = message.thinking, !thinking.isEmpty, message.role == "assistant" { DisclosureGroup("Раздумывание", isExpanded: $showThinking) { Text(thinking).font(.caption).foregroundStyle(.secondary) }.padding(10).background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12)) }
             ForEach(message.attachments) { a in Button { onPreview(a) } label: { AttachmentThumbView(attachment: a) } }
             Group { if message.role == "assistant" { MarkdownView(text: message.content.isEmpty ? "..." : message.content) } else { Text(message.content.isEmpty ? "..." : message.content) } }

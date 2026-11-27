@@ -47,6 +47,7 @@ class SettingsStore: ObservableObject {
     @AppStorage("schoolSubject") var schoolSubject: String = "Универсально"
     @AppStorage("schoolFormat") var schoolFormat: String = "Краткие ответы"
     @AppStorage("mellstroyMode") var mellstroyMode: Bool = true
+    @AppStorage("mellWallpaper") var mellWallpaper: String = "Градиент"
     @AppStorage("examMode") var examMode: Bool = false
     @AppStorage("verifyAnswers") var verifyAnswers: Bool = false
     @AppStorage("checkerModel") var checkerModel: String = ""

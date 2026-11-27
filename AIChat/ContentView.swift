@@ -15,7 +15,7 @@ struct ContentView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button { showHistory = true } label: { Image(systemName: settings.mellstroyMode ? (Mellstroy.icons["history"] ?? "clock.arrow.circlepath") : "sidebar.left") } }
                 ToolbarItem(placement: .principal) { ModelPickerMenu() }
-                ToolbarItem(placement: .topBarTrailing) { HStack(spacing: 14) { Button { showTools = true } label: { Image(systemName: "backpack") }; Button { showMesh = true } label: { Image(systemName: "book.fill") }; Button { _ = store.newChat() } label: { Image(systemName: settings.mellstroyMode ? (Mellstroy.icons["newChat"] ?? "bolt.fill") : "square.and.pencil") }; Button { showSettings = true } label: { Image(systemName: settings.mellstroyMode ? (Mellstroy.icons["settings"] ?? "slider.horizontal.3") : "gearshape") } } }
+                ToolbarItem(placement: .topBarTrailing) { HStack(spacing: 14) { Button { showTools = true } label: { Image(systemName: settings.mellstroyMode ? (Mellstroy.icons["tools"] ?? "backpack.fill") : "backpack") }; Button { showMesh = true } label: { Image(systemName: settings.mellstroyMode ? (Mellstroy.icons["mesh"] ?? "book.fill") : "book.fill") }; Button { _ = store.newChat() } label: { Image(systemName: settings.mellstroyMode ? (Mellstroy.icons["newChat"] ?? "bolt.fill") : "square.and.pencil") }; Button { showSettings = true } label: { Image(systemName: settings.mellstroyMode ? (Mellstroy.icons["settings"] ?? "slider.horizontal.3") : "gearshape") } } }
             }
         }
         .sheet(isPresented: $showSettings) { SettingsView() }

@@ -35,7 +35,8 @@ struct SettingsView: View {
                 }
                 Section("Меллстрой") {
                     Toggle("Тема Меллстроя", isOn: $settings.mellstroyMode)
-                    Text("Оранжево-красный акцент, иконки-мемы и короткие приколы на пустом экране. На ответы и правила 90% не влияет.").font(.caption).foregroundStyle(.secondary)
+                    Picker("Обои чата", selection: $settings.mellWallpaper) { ForEach(Mellstroy.wallpapers, id: \.self) { Text($0).tag($0) } }
+                    Text("Аватарка с Меллом, все иконки, мемы на обоях и пустом экране, оранжево-красный акцент. На ответы и правило 90% не влияет.").font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Системный промт") { TextEditor(text: $settings.systemPrompt).frame(minHeight: 120) }
                 Section("Генерация") { HStack { Text("Температура"); Slider(value: $settings.temperature, in: 0...2, step: 0.1); Text(String(format: "%.1f", settings.temperature)) } }
