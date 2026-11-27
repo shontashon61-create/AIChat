@@ -25,7 +25,7 @@ struct SettingsView: View {
                     if settings.verifyAnswers { Picker("Проверяющая модель", selection: $settings.checkerModel) { Text("Авто (другая модель)").tag(""); ForEach(settings.availableModels.filter { $0.id != settings.selectedModel }) { Text($0.id).tag($0.id) } } }
                     Picker("Предмет", selection: $settings.schoolSubject) { ForEach(SchoolSkills.subjects, id: \.self) { Text($0).tag($0) } }
                     Picker("Формат", selection: $settings.schoolFormat) { ForEach(SchoolSkills.formats, id: \.self) { Text($0).tag($0) } }
-                    Text("Для формата теста температура автоматически не выше 0.2 — ответы точнее.").font(.caption).foregroundStyle(.secondary)
+                    Text("Режимы ответов — только три: «Краткие ответы» — только ответ, «Ответы с решением» — шаги и ответ, «Подробные ответы» — объяснение, шаги и ответ. Для кратких температура автоматически не выше 0.2.").font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Голос, офлайн, ЦДЗ как человек") {
                     Toggle("Голосовые ответы", isOn: $settings.voiceMode)

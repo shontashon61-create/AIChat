@@ -21,11 +21,13 @@ struct MeshView: View {
         NavigationStack {
             List {
                 Section("Вход в МЭШ") {
-                    if mesh.isLoggedIn { Text("Вход выполнен. Токен хранится в Связке ключей, пароль нигде не сохраняется.").font(.caption) }
-                    else { Text("Войди своим аккаунтом МЭШ в браузере внутри приложения. Пароль вводишь только на сайте school.mos.ru, приложение его не видит и не хранит.").font(.caption) }
-                    TextField("ID ученика (person_id)", text: $mesh.studentId).autocorrectionDisabled().textInputAutocapitalization(.never)
+                    if mesh.isLoggedIn { Text("Шаг 3 из 3 — готово: ты вошёл, токен сам сохранился в Связке ключей. Теперь просто нажми «Загрузить ЦДЗ и домашку» ниже.").font(.caption) }
+                    else { Text("Как войти, по шагам:\n1. Нажми кнопку «Войти через school.mos.ru» ниже.\n2. В открывшемся окне войди своим логином и паролем МЭШ — пароль вводишь только на сайте школы, приложение его не видит.\n3. После входа нажми вверху «Я вошёл» — приложение само заберёт токен входа (aupd_token), руками его искать и вставлять не надо. Токен — это просто пропуск, который сайт выдаёт после входа.").font(.caption) }
+                    Text("ID ученика нужен, чтобы МЭШ отдал именно твою домашку. Он уже подставляется сам после входа, если поле пустое — оставь как есть и просто загрузи домашку.").font(.caption).foregroundStyle(.secondary)
+                    TextField("ID ученика", text: $mesh.studentId).autocorrectionDisabled().textInputAutocapitalization(.never)
                     Button(mesh.isLoggedIn ? "Выйти из МЭШ" : "Войти через school.mos.ru") { if mesh.isLoggedIn { mesh.logout() } else { showLogin = true } }
-                    TextField("Или вставь aupd_token вручную", text: $manualToken).autocorrectionDisabled().textInputAutocapitalization(.never)
+                    Text("Поле ниже — запасной вариант, только если вход через сайт не сработал. Обычно оно не нужно, пропускай его.").font(.caption).foregroundStyle(.secondary)
+                    TextField("Запасной вариант: токен вручную", text: $manualToken).autocorrectionDisabled().textInputAutocapitalization(.never)
                     Button("Сохранить токен") { if !manualToken.isEmpty { mesh.saveToken(manualToken); manualToken = "" } }.disabled(manualToken.isEmpty)
                 }
                 Section("Мои учебники и тетради") {

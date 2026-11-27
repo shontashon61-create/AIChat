@@ -63,7 +63,7 @@ class MeshStore: ObservableObject {
         req.setValue("student", forHTTPHeaderField: "profile-type")
         do {
             let (data, resp) = try await URLSession.shared.data(for: req)
-            guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else { throw NSError(domain: "MESH", code: (resp as? HTTPURLResponse)?.statusCode ?? 0, userInfo: [NSLocalizedDescriptionKey: "МЭШ вернул ошибку. Токен мог устареть — войди заново."]) }
+            guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else { let code = (resp as? HTTPURLResponse)?.statusCode ?? 0; throw NSError(domain: "MESH", code: code, userInfo: [NSLocalizedDescriptionKey: "МЭШ вернул ошибку " + String(code) + ". Токен мог устареть — войди заново."]) }
             let list = parse(data: data)
             let events = (try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]) ?? []
             let ls = ScheduleParser.lessons(from: events)

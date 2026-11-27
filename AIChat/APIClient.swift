@@ -13,7 +13,7 @@ struct ModelsResponse: Decodable {
 struct ModelItem: Decodable { let id: String }
 struct StreamDelta: Decodable {
     struct Choice: Decodable {
-        struct Delta: Decodable { let content: String?; let reasoning_content: String?; let reasoning: String? }
+        struct Delta: Decodable { let content: String?; let reasoning_content: String?; let reasoning: String?; let thinking: String? }
         let delta: Delta?
         let message: Delta?
     }
@@ -23,6 +23,7 @@ struct StreamDelta: Decodable {
 struct APIError: LocalizedError {
     let message: String
     let retryable: Bool
+    var code: Int = 0
     var errorDescription: String? { message }
 }
 
@@ -83,12 +84,13 @@ class APIClient {
         if !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { apiMessages.append(["role": "system", "content": prompt]) }
         for m in trimmed {
             if m.role == "user" && !m.attachments.isEmpty {
-                var parts: [[String: Any]] = [["type": "text", "text": m.content]]
+                let instruction = m.content + (m.attachments.count > 1 ? "\nФото несколько: решай все как один список по порядку фото, нумеруй сам №1, №2." : "") + "\nВажно: если ты не уверен на 90%, что на фото именно это задание и ты точно прочитал его номер, условие, числа и все варианты ответа — не решай догадку. Напиши: «Непонятно именно это задание» и укажи, что именно нечитаемо и какой угол или часть переснять крупнее."
+                var parts: [[String: Any]] = [["type": "text", "text": instruction]]
                 for a in m.attachments where a.kind == "image" { parts.append(["type": "image_url", "image_url": ["url": "data:\(a.mimeType);base64,\(a.base64)"]]) }
                 apiMessages.append(["role": "user", "content": parts])
             } else { apiMessages.append(["role": m.role, "content": m.content]) }
         }
-        let effectiveTemp = settings.schoolMode && settings.schoolFormat == "Выбор ответа (А/Б/В/Г)" ? min(settings.temperature, 0.2) : settings.temperature
+        let effectiveTemp = settings.schoolMode && settings.schoolFormat == "Краткие ответы" ? min(settings.temperature, 0.2) : settings.temperature
         let body: [String: Any] = ["model": settings.selectedModel, "messages": apiMessages, "stream": true, "temperature": effectiveTemp]
         var req = URLRequest(url: url, timeoutInterval: 120)
         req.httpMethod = "POST"
@@ -101,7 +103,7 @@ class APIClient {
             var errText = ""
             for try await line in bytes.lines { errText += line + "\n"; if errText.count > 2000 { break } }
             let code = http.statusCode
-            throw APIError(message: "HTTP \(code): \(String(errText.prefix(500)))", retryable: code == 429 || code >= 500)
+            throw APIError(message: "HTTP \(code): \(String(errText.prefix(500)))", retryable: code == 429 || code >= 500, code: code)
         }
         for try await line in bytes.lines {
             if Task.isCancelled { break }
@@ -109,7 +111,7 @@ class APIClient {
             if payload.hasPrefix("data:") { payload = String(payload.dropFirst(5)).trimmingCharacters(in: .whitespaces) }
             if payload.isEmpty || payload == "[DONE]" { if payload == "[DONE]" { break }; continue }
             guard payload.hasPrefix("{"), let data = payload.data(using: .utf8), let delta = try? JSONDecoder().decode(StreamDelta.self, from: data), let d = delta.choices?.first?.delta ?? delta.choices?.first?.message else { continue }
-            if let t = d.reasoning_content ?? d.reasoning, !t.isEmpty { onThinking(t) }
+            if let t = d.reasoning_content ?? d.reasoning ?? d.thinking, !t.isEmpty { onThinking(t) }
             if let c = d.content, !c.isEmpty { onContent(c) }
         }
     }

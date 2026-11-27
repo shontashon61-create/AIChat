@@ -45,9 +45,9 @@ struct ChatView: View {
                                     if settings.mellstroyMode { Text(emptyJoke).font(.caption2).foregroundStyle(Mellstroy.accent2) }
                                     Text(settings.selectedModel.isEmpty ? "Выберите модель в меню сверху" : settings.selectedModel).font(.caption2).foregroundStyle(.secondary)
                                     HStack(spacing: 8) {
-                                        Button("Тест") { settings.schoolFormat = "Выбор ответа (А/Б/В/Г)"; inputFocused = true }
-                                        Button("По шагам") { settings.schoolFormat = "Пошаговое решение"; inputFocused = true }
-                                        Button("Объясни") { settings.schoolFormat = "Объяснение как учитель"; inputFocused = true }
+                                        Button("Кратко") { settings.schoolFormat = "Краткие ответы"; inputFocused = true }
+                                        Button("С решением") { settings.schoolFormat = "Ответы с решением"; inputFocused = true }
+                                        Button("Подробно") { settings.schoolFormat = "Подробные ответы"; inputFocused = true }
                                     }
                                     .font(.caption)
                                     .buttonStyle(.bordered)
@@ -129,9 +129,7 @@ struct ChatView: View {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !isSending, (!text.isEmpty || !attachments.isEmpty) else { return }
         guard !settings.selectedModel.isEmpty else { errorText = "Сначала выберите модель в меню сверху или в настройках."; return }
-        let baseText = text.isEmpty ? "Реши задание с фото" : text
-        let photoNote = attachments.count > 1 ? "\nФото несколько: решай все как один список по порядку фото, нумеруй сам №1, №2." : ""
-        let content = attachments.isEmpty ? baseText : baseText + photoNote + "\nВажно: если ты не уверен на 90%, что на фото именно это задание и ты точно прочитал его номер, условие, числа и все варианты ответа — не решай догадку. Напиши: «Непонятно именно это задание» и укажи, что именно нечитаемо и какой угол или часть переснять крупнее."
+        let content = text.isEmpty ? "Реши задание с фото" : text
         session.messages.append(ChatMessage(role: "user", content: content, attachments: attachments))
         if session.title == "Новый чат" || session.title.isEmpty { let t = text.isEmpty ? "Фото" : text; session.title = t.count > 36 ? String(t.prefix(36)) + "…" : t }
         let hadAttachments = !attachments.isEmpty
@@ -173,7 +171,7 @@ struct ChatView: View {
                     retryAttempt = attempt
                     if attempt > 1 {
                         retryDelay = min(8, 1 << (attempt - 2))
-                        if let idx = session.messages.indices.last, session.messages[idx].content.isEmpty { session.messages[idx].thinking = nil; session.messages[idx].isError = false }
+                        if let idx = session.messages.indices.last, session.messages[idx].content.isEmpty { session.messages[idx].thinking = nil; session.messages[idx].isError = false; session.messages[idx].errorCode = 0 }
                     }
                 }
                 do {
@@ -196,6 +194,9 @@ struct ChatView: View {
                 if let idx = session.messages.indices.last {
                     if session.messages[idx].content.isEmpty { session.messages[idx].content = friendlyError(finalError) }
                     session.messages[idx].isError = true
+                    if let api = finalError as? APIError { session.messages[idx].errorCode = api.code }
+                    else if let url = finalError as? URLError { session.messages[idx].errorCode = url.code.rawValue }
+                    else if let ns = finalError as NSError? { session.messages[idx].errorCode = ns.code }
                 }
                 store.update(session); isSending = false; retryAttempt = 0; retryDelay = 0
             }
@@ -243,7 +244,7 @@ struct AttachmentPreviewView: View {
 }
 
 struct MessageRow: View {
-    @State private var showThinking = false
+    @State private var showThinking = true
     @State private var copied = false
     let message: ChatMessage
     let onRegenerate: () -> Void
@@ -253,7 +254,7 @@ struct MessageRow: View {
     let onSpeak: (String) -> Void
     var body: some View {
         VStack(alignment: message.role == "user" ? .trailing : .leading, spacing: 6) {
-            if let thinking = message.thinking, !thinking.isEmpty, message.role == "assistant" { DisclosureGroup("Ход мыслей ИИ", isExpanded: $showThinking) { Text(thinking).font(.caption).foregroundStyle(.secondary) }.padding(10).background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12)) }
+            if let thinking = message.thinking, !thinking.isEmpty, message.role == "assistant" { DisclosureGroup("Раздумывание", isExpanded: $showThinking) { Text(thinking).font(.caption).foregroundStyle(.secondary) }.padding(10).background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12)) }
             ForEach(message.attachments) { a in Button { onPreview(a) } label: { AttachmentThumbView(attachment: a) } }
             Group { if message.role == "assistant" { MarkdownView(text: message.content.isEmpty ? "..." : message.content) } else { Text(message.content.isEmpty ? "..." : message.content) } }
             .padding(12).background(message.role == "user" ? Color.accentColor : Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16)).foregroundStyle(message.role == "user" ? .white : .primary).frame(maxWidth: .infinity, alignment: message.role == "user" ? .trailing : .leading).textSelection(.enabled)
@@ -262,7 +263,7 @@ struct MessageRow: View {
                 Text(message.createdAt, style: .time).font(.caption2).foregroundStyle(.secondary)
                 if message.role == "assistant" && !message.content.isEmpty { Button { UIPasteboard.general.string = message.content; copied = true; DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { copied = false } } label: { Image(systemName: copied ? "checkmark" : "doc.on.doc") }; Button { onSpeak(message.content) } label: { Image(systemName: "speaker.wave.2") }; Button(action: onRegenerate) { Image(systemName: "arrow.clockwise") }; if let m = message.model { Text(m).font(.caption2).foregroundStyle(.secondary).lineLimit(1) } }
                 if message.role == "user" { Button { UIPasteboard.general.string = message.content } label: { Image(systemName: "doc.on.doc") }; Button(action: onEdit) { Image(systemName: "pencil") }; Button(action: onDelete) { Image(systemName: "trash") } }
-                if message.isError { Button("Повторить") { onRegenerate() }.font(.caption.bold()).foregroundStyle(.red) }
+                if message.isError { if message.errorCode != 0 { Text("Ошибка " + String(message.errorCode)).font(.caption.bold()).foregroundStyle(.red) }; Button("Повторить") { onRegenerate() }.font(.caption.bold()).foregroundStyle(.red) }
             }.font(.caption).foregroundStyle(.secondary)
         }.frame(maxWidth: .infinity, alignment: message.role == "user" ? .trailing : .leading)
     }

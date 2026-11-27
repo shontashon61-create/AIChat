@@ -20,6 +20,7 @@ struct ChatMessage: Identifiable, Codable, Equatable {
     var model: String?
     var createdAt = Date()
     var isError: Bool = false
+    var errorCode: Int = 0
 }
 
 struct ChatSession: Identifiable, Codable, Equatable {
@@ -44,7 +45,7 @@ class SettingsStore: ObservableObject {
     @AppStorage("temperature") var temperature: Double = 0.7
     @AppStorage("schoolMode") var schoolMode: Bool = true
     @AppStorage("schoolSubject") var schoolSubject: String = "Универсально"
-    @AppStorage("schoolFormat") var schoolFormat: String = "Кратко и по делу"
+    @AppStorage("schoolFormat") var schoolFormat: String = "Краткие ответы"
     @AppStorage("mellstroyMode") var mellstroyMode: Bool = true
     @AppStorage("examMode") var examMode: Bool = false
     @AppStorage("verifyAnswers") var verifyAnswers: Bool = false
@@ -58,6 +59,14 @@ class SettingsStore: ObservableObject {
     @AppStorage("noWaterMode") var noWaterMode: Bool = false
     @AppStorage("notebookLargeFont") var notebookLargeFont: Bool = true
     @AppStorage("onlyUnsolvedCDZ") var onlyUnsolvedCDZ: Bool = true
+    init() {
+        switch schoolFormat {
+        case "Краткие ответы", "Ответы с решением", "Подробные ответы": break
+        case "Пошаговое решение", "Как ученик, для тетради": schoolFormat = "Ответы с решением"
+        case "Объяснение как учитель", "Вся контрольная": schoolFormat = "Подробные ответы"
+        default: schoolFormat = "Краткие ответы"
+        }
+    }
     @Published var availableModels: [AIModel] = []
     @Published var modelsError: String?
     @Published var isLoadingModels = false
